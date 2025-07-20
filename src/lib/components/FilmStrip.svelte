@@ -4,7 +4,12 @@
   export let onReroll: (idx: number) => void = (idx) => {};
 </script>
 
-<div class="film-strip" tabindex="0" aria-label="Film strip of rules">
+<div
+  class="film-strip"
+  tabindex="0"
+  role="region"
+  aria-label="Film strip of rules"
+>
   {#each rules as rule, i}
     <FilmFrame {rule} onReroll={() => onReroll(i)} />
   {/each}

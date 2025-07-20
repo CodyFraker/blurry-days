@@ -1,458 +1,443 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import type { YouTubeVideo } from '$lib/youtube/rssParser';
-	import { getMockVideos } from '$lib/youtube/rssParser';
-	import '@fontsource/oswald/700.css'; // Use Oswald for a vintage look
+	import type { YoutubeVideo as YouTubeVideo } from '$lib/db/schema';
 
-	let videos: YouTubeVideo[] = [];
-	let selectedVideo: YouTubeVideo | null = null;
-	let intoxicationLevel = 2;
+	interface VideoWithGameCount extends YouTubeVideo {
+		gameCount: number;
+	}
+
+	let videos: VideoWithGameCount[] = [];
+	let displayedVideos: VideoWithGameCount[] = [];
 	let isLoading = false;
 	let error = '';
-
-	const isoValues: (number | 'PROGRAM')[] = [100, 200, 400, 800, 1600, 'PROGRAM'];
-	let isoIndex = 0; // 0-4 for ISO, 5 for PROGRAM
-	let selectedISO: number | 'PROGRAM' = isoValues[isoIndex] as number | 'PROGRAM';
-
-	$: selectedISO = isoValues[isoIndex] as number | 'PROGRAM';
+	let currentPage = 0;
+	const videosPerPage = 10;
+	let loadingMore = false;
+	let hasMoreVideos = true;
+	let loadMoreTrigger: HTMLElement;
+	let observer: IntersectionObserver;
 
 	onMount(async () => {
 		try {
-			// For now, use mock data until we implement the RSS parser
-			videos = getMockVideos();
+			const response = await fetch('/api/videos');
+			if (!response.ok) {
+				throw new Error('Failed to fetch videos from API');
+			}
+			const allVideos = await response.json();
+			videos = allVideos as VideoWithGameCount[];
+			loadNextPage();
 		} catch (err) {
 			error = 'Failed to load videos';
 			console.error(err);
 		}
+
+		// Setup intersection observer for lazy loading
+		observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting && hasMoreVideos && !loadingMore) {
+						loadNextPage();
+					}
+				});
+			},
+			{ threshold: 0.1 }
+		);
+
+		// Cleanup function
+		return () => {
+			if (observer) {
+				observer.disconnect();
+			}
+		};
 	});
 
-	function selectVideo(video: YouTubeVideo) {
-		selectedVideo = video;
+	function loadNextPage() {
+		if (loadingMore || !hasMoreVideos) return;
+		
+		loadingMore = true;
+		const startIndex = currentPage * videosPerPage;
+		const endIndex = startIndex + videosPerPage;
+		const newVideos = videos.slice(startIndex, endIndex);
+		
+		if (newVideos.length > 0) {
+			displayedVideos = [...displayedVideos, ...newVideos];
+			currentPage++;
+			hasMoreVideos = endIndex < videos.length;
+		} else {
+			hasMoreVideos = false;
+		}
+		
+		loadingMore = false;
 	}
 
-	function reviewAndConfirm() {
-		if (!selectedVideo) return;
-
+	function createGame(video: VideoWithGameCount) {
+		isLoading = true;
 		const params = new URLSearchParams();
-		params.set('videoId', selectedVideo.id);
-		params.set('intoxicationLevel', intoxicationLevel.toString());
+		params.set('videoId', video.id);
 		goto(`/game-summary?${params.toString()}`);
 	}
 
-	function formatDate(dateString: string) {
-		return new Date(dateString).toLocaleDateString();
-	}
-
-	function handleDialChange(e: Event) {
-		isoIndex = +(e.target as HTMLInputElement).value;
-		if (isoIndex === 5) {
-			// PROGRAM: randomly select one of the ISO values
-			const randomIdx = Math.floor(Math.random() * 5);
-			selectedISO = isoValues[randomIdx] as number;
-		} else {
-			selectedISO = isoValues[isoIndex] as number;
-		}
-		intoxicationLevel = isoIndex + 1;
+	// Watch for loadMoreTrigger element and observe it
+	$: if (loadMoreTrigger && observer) {
+		observer.observe(loadMoreTrigger);
 	}
 </script>
 
-<div class="home">
+<div class="home-container">
 	<div class="hero">
-		<h2>🎬 Choose Your Video</h2>
-		<p>Select a recent Grainydays video to base your drinking game on</p>
+		<h2 class="hero-title">Choose Your Video</h2>
+		<p class="hero-subtitle">Select a film photography video to generate a custom drinking game</p>
 	</div>
 
 	{#if error}
 		<div class="error-message">
+			<svg class="error-icon" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+			</svg>
 			{error}
 		</div>
 	{/if}
 
-	<div class="video-grid">
-		{#each videos as video}
-			<button 
-				class="video-card {selectedVideo?.id === video.id ? 'selected' : ''}"
-				on:click={() => selectVideo(video)}
-				on:keydown={(e) => e.key === 'Enter' && selectVideo(video)}
-				type="button"
-				aria-label="Select video: {video.title}"
-			>
-				<div class="video-thumbnail">
-					<img src={video.thumbnail} alt={video.title} />
-					<div class="video-overlay">
-						<span class="play-icon">▶</span>
-					</div>
-				</div>
-				<div class="video-info">
-					<h3>{video.title}</h3>
-					<p class="video-date">{formatDate(video.publishedAt)}</p>
-				</div>
-			</button>
-		{/each}
-	</div>
-
-	{#if selectedVideo}
-		<div class="game-config">
-			<div class="card">
-				<h3>🍻 Set Your Intoxication Level</h3>
-				<p>How drunk do you want to get?</p>
-				
-				<div class="slider-container">
-					<div class="iso-dial vintage">
-						<svg viewBox="0 0 200 200" width="200" height="200" class="dial-svg">
-							<!-- Knurled edge -->
-							<defs>
-								<radialGradient id="metal" cx="50%" cy="50%" r="50%">
-									<stop offset="0%" stop-color="#444"/>
-									<stop offset="100%" stop-color="#111"/>
-								</radialGradient>
-							</defs>
-							<circle cx="100" cy="100" r="98" fill="url(#metal)" stroke="#888" stroke-width="2"/>
-							<!-- Knurl effect -->
-							<g class="knurl">
-								{#each Array(40) as _, i}
-									<rect x="98" y="2" width="4" height="16" rx="2" fill="#bbb" stroke="#222" stroke-width="0.5" transform="rotate({i*9} 100 100)" />
-								{/each}
-							</g>
-							<!-- Dial face -->
-							<circle cx="100" cy="100" r="80" fill="#181818" stroke="#444" stroke-width="2"/>
-							<!-- Pointer -->
-							<polygon points="100,18 108,38 92,38" fill="#ffd700" stroke="#222" stroke-width="2"/>
-							<!-- Curved numbers -->
-							<text class="dial-number" font-family="'Oswald', 'Courier New', monospace" font-size="20" fill="#fff">
-								<textPath xlink:href="#arc1" startOffset="0%">100</textPath>
-							</text>
-							<text class="dial-number" font-family="'Oswald', 'Courier New', monospace" font-size="20" fill="#fff">
-								<textPath xlink:href="#arc2" startOffset="0%">200</textPath>
-							</text>
-							<text class="dial-number" font-family="'Oswald', 'Courier New', monospace" font-size="20" fill="#fff">
-								<textPath xlink:href="#arc3" startOffset="0%">400</textPath>
-							</text>
-							<text class="dial-number" font-family="'Oswald', 'Courier New', monospace" font-size="20" fill="#fff">
-								<textPath xlink:href="#arc4" startOffset="0%">800</textPath>
-							</text>
-							<text class="dial-number" font-family="'Oswald', 'Courier New', monospace" font-size="20" fill="#fff">
-								<textPath xlink:href="#arc5" startOffset="0%">1600</textPath>
-							</text>
-							<text class="dial-program" font-family="'Oswald', 'Courier New', monospace" font-size="18" fill="#00ff7f">
-								<textPath xlink:href="#arc6" startOffset="0%">PROGRAM</textPath>
-							</text>
-							<!-- Arcs for text paths -->
-							<path id="arc1" d="M 100 30 A 70 70 0 0 1 170 100" fill="none"/>
-							<path id="arc2" d="M 170 100 A 70 70 0 0 1 100 170" fill="none"/>
-							<path id="arc3" d="M 100 170 A 70 70 0 0 1 30 100" fill="none"/>
-							<path id="arc4" d="M 30 100 A 70 70 0 0 1 100 30" fill="none"/>
-							<path id="arc5" d="M 100 30 A 70 70 0 0 1 135 45" fill="none"/>
-							<path id="arc6" d="M 135 45 A 70 70 0 0 1 100 30" fill="none"/>
-						</svg>
-						<input 
-							type="range" 
-							class="dial-input" 
-							min="0" 
-							max="5" 
-							step="1"
-							bind:value={isoIndex}
-							on:input={handleDialChange}
+	{#if displayedVideos.length > 0}
+		<div class="videos-list">
+			{#each displayedVideos as video (video.id)}
+				<div class="video-item">
+					<div class="video-thumbnail-wrapper">
+						<img
+							src={video.thumbnail || ''}
+							alt={video.title}
+							class="video-thumbnail"
 						/>
-						<div class="dial-center vintage">
-							<span class="current-value">{selectedISO}</span>
+					</div>
+					<div class="video-details">
+						<h3 class="video-title">{video.title}</h3>
+						<div class="video-stats">
+							<span class="game-count">
+								{video.gameCount} {video.gameCount === 1 ? 'game' : 'games'} created
+							</span>
 						</div>
-					</div>
-					<div class="dial-labels vintage">
-						<span>100</span>
-						<span>200</span>
-						<span>400</span>
-						<span>800</span>
-						<span>1600</span>
-						<span class="program-label">PROGRAM</span>
+						<button
+							on:click={() => createGame(video)}
+							disabled={isLoading}
+							class="create-game-btn"
+						>
+							{#if isLoading}
+								<span class="loading"></span>
+								<span>Loading...</span>
+							{:else}
+								<span>🎲</span>
+								<span>Create Game</span>
+							{/if}
+						</button>
 					</div>
 				</div>
+			{/each}
+		</div>
 
-				<div class="selected-video">
-					<h4>Selected Video:</h4>
-					<p>{selectedVideo.title}</p>
-				</div>
-
-				<button 
-					class="btn generate-btn" 
-					on:click={reviewAndConfirm}
-					disabled={isLoading}
-				>
-					{#if isLoading}
-						<span class="loading"></span>
-						Review & Confirm
-					{:else}
-						🎲 Review & Confirm
-					{/if}
-				</button>
+		<!-- Load more trigger -->
+		{#if hasMoreVideos}
+			<div class="load-more-trigger" bind:this={loadMoreTrigger}>
+				{#if loadingMore}
+					<div class="loading-more">
+						<div class="loading"></div>
+						<span>Loading more videos...</span>
+					</div>
+				{/if}
 			</div>
+		{:else if displayedVideos.length > 0}
+			<div class="end-message">
+				<p>You've reached the end! 🎉</p>
+				<p class="end-subtitle">All {videos.length} videos loaded</p>
+			</div>
+		{/if}
+	{:else if !error}
+		<div class="loading-state">
+			<div class="loading"></div>
+			<p>Loading videos...</p>
 		</div>
 	{/if}
 </div>
 
 <style>
-	.home {
-		max-width: 1000px;
+	.home-container {
+		max-width: 1200px;
 		margin: 0 auto;
+		padding: 0 1rem;
 	}
 
 	.hero {
 		text-align: center;
 		margin-bottom: 3rem;
+		padding: 2rem 0;
 	}
 
-	.hero h2 {
+	.hero-title {
 		font-size: 2.5rem;
-		margin-bottom: 1rem;
-		color: #ffd700;
+		font-weight: 700;
+		color: #1f2937;
+		margin: 0 0 1rem 0;
+		letter-spacing: -0.025em;
 	}
 
-	.hero p {
-		font-size: 1.2rem;
-		color: #ccc;
+	.hero-subtitle {
+		font-size: 1.125rem;
+		color: #6b7280;
+		margin: 0;
+		max-width: 600px;
+		margin: 0 auto;
 	}
 
 	.error-message {
-		background: rgba(220, 53, 69, 0.2);
-		border: 2px solid #dc3545;
-		color: #ff6b6b;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		color: #991b1b;
 		padding: 1rem;
-		border-radius: 4px;
+		border-radius: 8px;
 		margin-bottom: 2rem;
-		text-align: center;
+		font-weight: 500;
 	}
 
-	.video-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-		gap: 1.5rem;
-		margin-bottom: 3rem;
+	.error-icon {
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
 	}
 
-	.video-card {
-		background: rgba(45, 45, 45, 0.9);
-		border: 2px solid #8b4513;
+	.videos-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.video-item {
+		background: #ffffff;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
+		padding: 1rem;
+		display: flex;
+		gap: 1rem;
+		transition: all 0.2s ease;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.video-item:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.video-thumbnail-wrapper {
+		flex-shrink: 0;
+		width: 120px;
+		height: 90px;
 		border-radius: 8px;
 		overflow: hidden;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		position: relative;
-		width: 100%;
-		padding: 0;
-		margin: 0;
-		font-family: inherit;
-		text-align: left;
-	}
-
-	.video-card:hover {
-		transform: translateY(-4px);
-		box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-		border-color: #ffd700;
-	}
-
-	.video-card:focus {
-		outline: 2px solid #ffd700;
-		outline-offset: 2px;
-	}
-
-	.video-card.selected {
-		border-color: #ffd700;
-		box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
 	}
 
 	.video-thumbnail {
-		position: relative;
-		width: 100%;
-		height: 180px;
-		overflow: hidden;
-	}
-
-	.video-thumbnail img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 	}
 
-	.video-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.5);
+	.video-details {
+		flex: 1;
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		opacity: 0;
-		transition: opacity 0.3s ease;
+		flex-direction: column;
+		justify-content: space-between;
+		min-width: 0;
 	}
 
-	.video-card:hover .video-overlay {
-		opacity: 1;
-	}
-
-	.play-icon {
-		font-size: 3rem;
-		color: #fff;
-		text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-	}
-
-	.video-info {
-		padding: 1rem;
-	}
-
-	.video-info h3 {
+	.video-title {
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: #1f2937;
 		margin: 0 0 0.5rem 0;
-		font-size: 1.1rem;
-		color: #f5f5f5;
 		line-height: 1.4;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 
-	.video-date {
-		margin: 0;
-		color: #999;
-		font-size: 0.9rem;
-	}
-
-	.game-config {
-		max-width: 600px;
-		margin: 0 auto;
-	}
-
-	.game-config h3 {
-		color: #ffd700;
+	.video-stats {
 		margin-bottom: 1rem;
 	}
 
-	.game-config p {
-		color: #ccc;
-		margin-bottom: 2rem;
+	.game-count {
+		font-size: 0.875rem;
+		color: #6b7280;
+		background: #f3f4f6;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
 	}
 
-	/* ISO Dial Styles */
-	.iso-dial.vintage {
-		position: relative;
-		width: 200px;
-		height: 200px;
-		margin: 0 auto 2rem;
-	}
-	.dial-svg {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 200px;
-		height: 200px;
-		z-index: 1;
-	}
-	.knurl rect {
-		filter: brightness(0.8);
-	}
-	.dial-center.vintage {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 60px;
-		height: 60px;
-		border-radius: 50%;
-		background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
-		border: 2px solid #8b4513;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 
-			inset 0 1px 3px rgba(0, 0, 0, 0.5),
-			0 2px 4px rgba(0, 0, 0, 0.3);
-		z-index: 2;
-	}
-	.current-value {
-		font-size: 1.5rem;
-		font-weight: bold;
-		color: #ffd700;
-		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-		font-family: 'Oswald', 'Courier New', monospace;
-	}
-	.dial-input {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		opacity: 0;
+	.create-game-btn {
+		background: #10b981;
+		color: #ffffff;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 600;
 		cursor: pointer;
-		z-index: 3;
-	}
-	.dial-labels.vintage {
-		display: flex;
-		justify-content: space-between;
-		margin-top: 1rem;
-		font-size: 0.9rem;
-		color: #ccc;
-		max-width: 400px;
-		margin-left: auto;
-		margin-right: auto;
-		font-family: 'Oswald', 'Courier New', monospace;
-	}
-	.dial-labels .program-label {
-		color: #00ff7f;
-		font-weight: bold;
-	}
-	.dial-number {
-		font-family: 'Oswald', 'Courier New', monospace;
-		font-weight: bold;
-		letter-spacing: 1px;
-	}
-	.dial-program {
-		font-family: 'Oswald', 'Courier New', monospace;
-		font-weight: bold;
-		letter-spacing: 2px;
-		fill: #00ff7f;
-	}
-	.selected-video {
-		margin: 2rem 0;
-		padding: 1rem;
-		background: rgba(139, 69, 19, 0.2);
-		border-radius: 4px;
-		border-left: 4px solid #ffd700;
-	}
-
-	.selected-video h4 {
-		margin: 0 0 0.5rem 0;
-		color: #ffd700;
-	}
-
-	.selected-video p {
-		margin: 0;
-		color: #f5f5f5;
-	}
-
-	.generate-btn {
-		width: 100%;
-		font-size: 1.2rem;
-		padding: 1rem;
+		transition: all 0.2s ease;
 		display: flex;
 		align-items: center;
-		justify-content: center;
 		gap: 0.5rem;
+		align-self: flex-start;
 	}
 
+	.create-game-btn:hover:not(:disabled) {
+		background: #059669;
+		transform: scale(1.05);
+	}
+
+	.create-game-btn:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	.load-more-trigger {
+		display: flex;
+		justify-content: center;
+		padding: 2rem 0;
+		min-height: 100px;
+	}
+
+	.loading-more {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		color: #6b7280;
+	}
+
+	.end-message {
+		text-align: center;
+		padding: 3rem 0;
+		color: #6b7280;
+	}
+
+	.end-message p {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+	}
+
+	.end-subtitle {
+		font-size: 0.875rem !important;
+		font-weight: 400 !important;
+		margin-top: 0.5rem !important;
+	}
+
+	.loading-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		padding: 3rem 0;
+		color: #6b7280;
+	}
+
+	/* Responsive design */
 	@media (max-width: 768px) {
-		.hero h2 {
+		.hero-title {
 			font-size: 2rem;
 		}
 
-		.video-grid {
-			grid-template-columns: 1fr;
+		.hero-subtitle {
+			font-size: 1rem;
 		}
 
-		.video-thumbnail {
-			height: 150px;
+		.video-item {
+			flex-direction: column;
+			text-align: center;
+		}
+
+		.video-thumbnail-wrapper {
+			width: 100%;
+			max-width: 300px;
+			height: auto;
+			aspect-ratio: 16/9;
+			margin: 0 auto 1rem;
+		}
+
+		.video-details {
+			align-items: center;
+		}
+
+		.create-game-btn {
+			width: 100%;
+			max-width: 200px;
 		}
 	}
 
-	.dial-labels .program-label {
-		color: #00ff7f;
-		font-weight: bold;
+	@media (max-width: 480px) {
+		.home-container {
+			padding: 0 0.5rem;
+		}
+
+		.hero {
+			padding: 1.5rem 0;
+			margin-bottom: 2rem;
+		}
+
+		.hero-title {
+			font-size: 1.75rem;
+		}
+
+		.hero-subtitle {
+			font-size: 0.875rem;
+		}
+
+		.video-item {
+			padding: 0.75rem;
+		}
+
+		.video-thumbnail-wrapper {
+			width: 100px;
+			height: 75px;
+		}
+
+		.create-game-btn {
+			padding: 0.625rem 1.25rem;
+			font-size: 0.8rem;
+		}
 	}
-</style> 
+
+	/* Dark mode support */
+	@media (prefers-color-scheme: dark) {
+		.hero-title {
+			color: #f9fafb;
+		}
+
+		.hero-subtitle {
+			color: #9ca3af;
+		}
+
+		.video-item {
+			background: #1f2937;
+			border-color: #374151;
+		}
+
+		.video-title {
+			color: #f9fafb;
+		}
+
+		.game-count {
+			background: #374151;
+			color: #d1d5db;
+		}
+
+		.error-message {
+			background: #450a0a;
+			border-color: #7f1d1d;
+			color: #fca5a5;
+		}
+	}
+</style>

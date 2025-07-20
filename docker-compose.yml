@@ -25,8 +25,9 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - .:/app
+      - .:/app:Z
       - /app/node_modules
+      - /app/.svelte-kit
     environment:
       - DATABASE_URL=postgres://grainydays:grainydays_dev@postgres:5432/grainydays
       - NODE_ENV=development

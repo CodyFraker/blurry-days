@@ -130,10 +130,14 @@ const baseRules: Omit<Rule, 'id' | 'gameId' | 'order' | 'createdAt'>[] = [
 
 export function selectRules(intoxicationLevel: number, maxRules: number = 5): typeof baseRules {
   // Select 2-3 categories for diversity
-  const categories = Object.values(CategoryEnum);
-  const selectedCategories = shuffleArray(categories).slice(0, Math.min(3, Math.max(2, Math.floor(maxRules / 2))));
+	const categories = Object.values(CategoryEnum) as (typeof CategoryEnum[keyof typeof CategoryEnum])[];
+	const selectedCategories = shuffleArray(categories).slice(
+		0,
+		Math.min(3, Math.max(2, Math.floor(maxRules / 2)))
+	);
   
   // Filter rules by selected categories
+  // @ts-ignore
   const categoryRules = baseRules.filter(rule => selectedCategories.includes(rule.category));
   
   // Weighted random selection
@@ -188,17 +192,17 @@ export function calculateEffectiveDrink(baseDrink: number, intoxicationLevel: nu
   return Math.min(effectiveDrink, DrinkEnum.Shot);
 }
 
-export function getDrinkName(drinkLevel: number): string {
+export function getDrinkName(drinkLevel: number): { name: string; icon: string } {
   switch (drinkLevel) {
-    case DrinkEnum.Sip: return 'Sip';
-    case DrinkEnum.Gulp: return 'Gulp';
-    case DrinkEnum.Pull: return 'Pull';
-    case DrinkEnum.Shot: return 'Shot';
-    default: return 'Sip';
+    case DrinkEnum.Sip: return { name: 'Sip', icon: '🥤' };
+    case DrinkEnum.Gulp: return { name: 'Gulp', icon: '🥃' };
+    case DrinkEnum.Pull: return { name: 'Pull', icon: '🍺' };
+    case DrinkEnum.Shot: return { name: 'Shot', icon: '🥃' };
+    default: return { name: 'Sip', icon: '🥤' };
   }
 }
 
-function shuffleArray<T>(array: T[]): T[] {
+function shuffleArray<T>(array: readonly T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
