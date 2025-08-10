@@ -2,9 +2,6 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { getDrinkName } from '$lib/rules/ruleEngine';
-	import { CategoryEnum, DrinkEnum } from '$lib/db/schema';
-	import FilmStrip from '$lib/components/FilmStrip.svelte';
-	import { Dialog } from 'bits-ui';
 
 	interface Rule {
 		id: string;
@@ -29,18 +26,10 @@
 	let isLoading = true;
 	let error = '';
 	let copied = false;
-	let showCustomRuleModal = false;
-	let isRerolling = false;
-	let isAddingRule = false;
-	let rerollingRules = new Set<string>(); // Track which rules are being re-rolled
-
-	// Custom rule form
-	let customRuleText = '';
-	let customRuleCategory = CategoryEnum.General;
-	let customRuleDrink = DrinkEnum.Sip;
+	// Read-only game page - no modification allowed
 
 	$: gameId = $page.params.id;
-	$: ruleTexts = rules.map((rule) => rule.text);
+
 
 	onMount(async () => {
 		await loadGame();
@@ -64,114 +53,7 @@
 		}
 	}
 
-	async function rerollRules() {
-		if (!game) return;
 
-		isRerolling = true;
-		try {
-			const response = await fetch(`/api/games/${gameId}/reroll`, {
-				method: 'POST'
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to re-roll rules');
-			}
-
-			const data = await response.json();
-			rules = data.rules;
-		} catch (err) {
-			error = 'Failed to re-roll rules';
-			console.error(err);
-		} finally {
-			isRerolling = false;
-		}
-	}
-
-	async function rerollSingleRule(ruleId: string) {
-		if (!game) return;
-
-		rerollingRules.add(ruleId);
-		try {
-			const response = await fetch(`/api/games/${gameId}/rules/${ruleId}/reroll`, {
-				method: 'POST'
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to re-roll rule');
-			}
-
-			const data = await response.json();
-
-			// Update the specific rule in the rules array
-			rules = rules.map((rule) => (rule.id === ruleId ? data.rule : rule));
-		} catch (err) {
-			error = 'Failed to re-roll rule';
-			console.error(err);
-		} finally {
-			rerollingRules.delete(ruleId);
-		}
-	}
-
-	async function addCustomRule() {
-		if (!game || !customRuleText.trim()) return;
-
-		isAddingRule = true;
-		try {
-			const response = await fetch(`/api/games/${gameId}/rules`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					text: customRuleText.trim(),
-					category: customRuleCategory,
-					baseDrink: customRuleDrink
-				})
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to add custom rule');
-			}
-
-			const data = await response.json();
-			rules = [...rules, data.rule];
-
-			// Reset form
-			customRuleText = '';
-			customRuleCategory = CategoryEnum.General;
-			customRuleDrink = DrinkEnum.Sip;
-			showCustomRuleModal = false;
-		} catch (err) {
-			error = 'Failed to add custom rule';
-			console.error(err);
-		} finally {
-			isAddingRule = false;
-		}
-	}
-
-	async function deleteRule(ruleId: string) {
-		if (!game) return;
-
-		try {
-			const response = await fetch(`/api/games/${gameId}/rules`, {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ ruleId })
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to delete rule');
-			}
-
-			// Reload rules to get updated order
-			await loadGame();
-		} catch (err) {
-			error = 'Failed to delete rule';
-			console.error(err);
-		}
-	}
 
 	async function copyShareLink() {
 		const shareUrl = `${window.location.origin}/game/${gameId}`;
@@ -199,12 +81,7 @@
 		return category.charAt(0).toUpperCase() + category.slice(1);
 	}
 
-	function closeModal() {
-		showCustomRuleModal = false;
-		customRuleText = '';
-		customRuleCategory = CategoryEnum.General;
-		customRuleDrink = DrinkEnum.Sip;
-	}
+
 </script>
 
 {#if isLoading}
@@ -257,82 +134,9 @@
 				<h2 class="section-title">📜 The Rules</h2>
 				<p class="section-description">Follow these rules as you watch the video. Drink responsibly!</p>
 			</div>
-			
-			<div class="rules-actions">
-				<button class="btn btn-primary" on:click={rerollRules} disabled={isRerolling}>
-					{#if isRerolling}
-						<span class="loading"></span>
-						<span>Rerolling...</span>
-					{:else}
-						<span>🎲</span>
-						<span>Reroll All Rules</span>
-					{/if}
-				</button>
-
-				<Dialog.Root bind:open={showCustomRuleModal}>
-					<Dialog.Trigger>
-						<button class="btn btn-success">
-							<span>✨</span>
-							<span>Add Custom Rule</span>
-						</button>
-					</Dialog.Trigger>
-					<Dialog.Portal>
-						<Dialog.Overlay class="modal-overlay" />
-						<Dialog.Content class="modal-content">
-							<Dialog.Title class="modal-title">✨ Add a Custom Rule</Dialog.Title>
-							<form on:submit|preventDefault={addCustomRule}>
-								<div class="form-group">
-									<label for="custom-rule-text" class="form-label">Rule Description</label>
-									<textarea
-										id="custom-rule-text"
-										bind:value={customRuleText}
-										placeholder="e.g., Every time someone laughs, take a sip."
-										rows="3"
-										required
-										class="form-input"
-									></textarea>
-								</div>
-								<div class="form-row">
-									<div class="form-group">
-										<label for="custom-rule-category" class="form-label">Category</label>
-										<select id="custom-rule-category" bind:value={customRuleCategory} class="form-input">
-											{#each Object.values(CategoryEnum) as category}
-												<option value={category}>{getCategoryLabel(category)}</option>
-											{/each}
-										</select>
-									</div>
-									<div class="form-group">
-										<label for="custom-rule-drink" class="form-label">Drink</label>
-										<select id="custom-rule-drink" bind:value={customRuleDrink} class="form-input">
-											{#each Object.entries(DrinkEnum) as [key, value]}
-												{#if !isNaN(Number(key))}
-													<option value={key}>{getDrinkName(Number(key)).name}</option>
-												{/if}
-											{/each}
-										</select>
-									</div>
-								</div>
-								<div class="modal-actions">
-									<Dialog.Close>
-										<button type="button" class="btn btn-secondary">Cancel</button>
-									</Dialog.Close>
-									<button type="submit" class="btn btn-success" disabled={isAddingRule}>
-										{#if isAddingRule}
-											<span class="loading"></span>
-											<span>Adding...</span>
-										{:else}
-											<span>Add Rule</span>
-										{/if}
-									</button>
-								</div>
-							</form>
-						</Dialog.Content>
-					</Dialog.Portal>
-				</Dialog.Root>
-			</div>
 		</div>
 
-		<FilmStrip rules={ruleTexts} />
+
 
 		<div class="rules-grid-container">
 			<div class="rules-grid">
@@ -355,27 +159,6 @@
 
 						<div class="rule-footer">
 							<span class="rule-category">{getCategoryLabel(rule.category)}</span>
-							<div class="rule-actions">
-								<button
-									class="action-btn reroll-btn"
-									on:click={() => rerollSingleRule(rule.id)}
-									disabled={rerollingRules.has(rule.id)}
-									aria-label="Reroll rule"
-								>
-									{#if rerollingRules.has(rule.id)}
-										<div class="loading"></div>
-									{:else}
-										🎲
-									{/if}
-								</button>
-								<button
-									class="action-btn delete-btn"
-									on:click={() => deleteRule(rule.id)}
-									aria-label="Delete rule"
-								>
-									🗑️
-								</button>
-							</div>
 						</div>
 					</div>
 				{/each}
@@ -517,13 +300,7 @@
 		margin: 0;
 	}
 
-	.rules-actions {
-		display: flex;
-		gap: 1rem;
-		margin-bottom: 2rem;
-		justify-content: center;
-		flex-wrap: wrap;
-	}
+
 
 	.rules-grid-container {
 		margin-bottom: 3rem;
@@ -619,58 +396,7 @@
 		font-weight: 500;
 	}
 
-	.rule-actions {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
 
-	.action-btn {
-		background: transparent;
-		border: 1px solid #e5e7eb;
-		color: #6b7280;
-		padding: 0.5rem;
-		border-radius: 8px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 32px;
-		height: 32px;
-		font-size: 1rem;
-		transition: all 0.2s ease;
-	}
-
-	.action-btn:hover {
-		background: #f9fafb;
-		border-color: #d1d5db;
-	}
-
-	.delete-btn:hover {
-		background: #fef2f2;
-		border-color: #fecaca;
-		color: #dc2626;
-	}
-
-	.reroll-btn:hover:not(:disabled) {
-		background: #eff6ff;
-		border-color: #bfdbfe;
-		color: #3b82f6;
-	}
-
-	.action-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.action-btn .loading {
-		width: 12px;
-		height: 12px;
-		border: 1px solid transparent;
-		border-top: 1px solid currentColor;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
 
 	/* Custom Rule Styling */
 	.custom-rule {

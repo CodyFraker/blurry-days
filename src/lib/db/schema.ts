@@ -70,10 +70,36 @@ export const selectRuleSchema = createSelectSchema(rules);
 export const insertYoutubeVideoSchema = createInsertSchema(youtubeVideos);
 export const selectYoutubeVideoSchema = createSelectSchema(youtubeVideos);
 
+// Questions table for storing data from Google Sheets
+export const questions = pgTable('questions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sheetId: text('sheet_id').notNull(), // ID from Google Sheet
+  text: text('text').notNull(),
+  category: text('category', { enum: [
+    CategoryEnum.Camera,
+    CategoryEnum.Film,
+    CategoryEnum.Technique,
+    CategoryEnum.Location,
+    CategoryEnum.Equipment,
+    CategoryEnum.General
+  ] as [string, ...string[]] }).notNull(),
+  weight: doublePrecision('weight').notNull(),
+  baseDrink: integer('base_drink').notNull(),
+  order: integer('order').notNull(),
+  lastSynced: timestamp('last_synced').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const insertQuestionSchema = createInsertSchema(questions);
+export const selectQuestionSchema = createSelectSchema(questions);
+
 // Types
 export type Game = z.infer<typeof selectGameSchema>;
 export type NewGame = z.infer<typeof insertGameSchema>;
 export type Rule = z.infer<typeof selectRuleSchema>;
 export type NewRule = z.infer<typeof insertRuleSchema>;
 export type YoutubeVideo = z.infer<typeof selectYoutubeVideoSchema>;
-export type NewYoutubeVideo = z.infer<typeof insertYoutubeVideoSchema>; 
+export type NewYoutubeVideo = z.infer<typeof insertYoutubeVideoSchema>;
+export type Question = z.infer<typeof selectQuestionSchema>;
+export type NewQuestion = z.infer<typeof insertQuestionSchema>;

@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import type { YoutubeVideo as YouTubeVideo } from '$lib/db/schema';
 	import { CategoryEnum, DrinkEnum } from '$lib/db/schema';
+	import { getDrinkName } from '$lib/rules/ruleEngine';
 	import { Dialog } from 'bits-ui';
 
 	interface GameSettings {
@@ -33,6 +34,13 @@
 	let isAddingRule = false;
 	let showVideoSelectionModal = false;
 	let isGeneratingRules = false;
+	let isRerolling = false;
+	let rerollingRules = new Set<string>();
+
+	// Custom rule form
+	let customRuleText = '';
+	let customRuleCategory = CategoryEnum.General;
+	let customRuleDrink = DrinkEnum.Sip;
 
 	// Intoxication Level State
 	const isoValues: (number | 'PROGRAM')[] = [100, 200, 400, 800, 1600, 'PROGRAM'];
@@ -48,30 +56,18 @@
 		{ label: 'Medium Format', value: 18 },
 		{ label: '35mm', value: 36 }
 	];
-	let ruleIndex = [2]; // Default to Land Camera (8 rules)
-	$: selectedFormat = filmFormats[ruleIndex[0]];
-
-	// Custom rule form
-	let customRuleText = '';
-	let customRuleCategory = CategoryEnum.General;
-	let customRuleDrink = DrinkEnum.Sip;
+	let selectedFormatIndex = 3; // Default to Square Format (12 rules)
+	$: selectedFormat = filmFormats[selectedFormatIndex];
 
 	$: if (gameSettings) {
 		gameSettings.intoxicationLevel = isoIndex + 1;
 		gameSettings.numberOfRules = selectedFormat.value;
 	}
 
-	function handleRuleCommit(v: number) {
-		const currentVal = v;
-		const closest = filmFormats.reduce((prev, curr) => {
-			return Math.abs(curr.value - currentVal) < Math.abs(prev.value - currentVal)
-				? curr
-				: prev;
-		});
-		ruleIndex = [filmFormats.findIndex((f) => f.value === closest.value)];
-	}
+
 
 	onMount(async () => {
+		isLoading = true;
 		try {
 			const response = await fetch('/api/videos');
 			if (!response.ok) {
@@ -82,17 +78,17 @@
 		} catch (err) {
 			error = 'Failed to load data';
 			console.error(err);
+		} finally {
+			isLoading = false;
 		}
 	});
 
 	function loadGameSettings() {
 		const params = new URLSearchParams(window.location.search);
 		const videoId = params.get('videoId');
-		const intoxicationLevel = parseInt(params.get('intoxicationLevel') || '2');
-		const initialRuleIndex = parseInt(params.get('ruleIndex') || '2');
 
 		if (!videoId) {
-			error = 'No video selected';
+			goto('/');
 			return;
 		}
 
@@ -102,17 +98,13 @@
 			return;
 		}
 
-		ruleIndex = [initialRuleIndex];
-
 		gameSettings = {
 			videoId: video.id,
 			videoTitle: video.title,
 			videoThumbnail: video.thumbnail,
-			intoxicationLevel,
-			numberOfRules: filmFormats[ruleIndex[0]].value
+			intoxicationLevel: isoIndex + 1,
+			numberOfRules: selectedFormat.value
 		};
-
-		isoIndex = intoxicationLevel - 1;
 	}
 
 	function selectVideo(video: YouTubeVideo) {
@@ -124,21 +116,12 @@
 		showVideoSelectionModal = false;
 	}
 
-	function handleDialChange(e: Event) {
-		isoIndex = +(e.target as HTMLInputElement).value;
-		if (isoIndex === 5) {
-			const randomIdx = Math.floor(Math.random() * 5);
-			selectedISO = isoValues[randomIdx] as number;
-		} else {
-			selectedISO = isoValues[isoIndex] as number;
-		}
-	}
-
 	async function generateRules() {
 		if (!gameSettings) return;
 
 		isGeneratingRules = true;
 		try {
+			// Generate rules without creating a game yet
 			const response = await fetch('/api/games/generate-rules', {
 				method: 'POST',
 				headers: {
@@ -156,10 +139,10 @@
 				throw new Error('Failed to generate rules');
 			}
 
-			const generatedRules = await response.json();
-			rules = generatedRules.rules.map((rule: any, index: number) => ({
+			const data = await response.json();
+			rules = data.rules.map((rule: any, index: number) => ({
 				...rule,
-				id: `generated-${Date.now()}-${index}`,
+				id: `temp-${Date.now()}-${index}`,
 				order: index + 1,
 				isCustom: false
 			}));
@@ -171,8 +154,86 @@
 		}
 	}
 
+	async function rerollRules() {
+		if (!gameSettings) return;
+
+		isRerolling = true;
+		try {
+			const response = await fetch('/api/games/generate-rules', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					videoId: gameSettings.videoId,
+					videoTitle: gameSettings.videoTitle,
+					numberOfRules: gameSettings.numberOfRules,
+					intoxicationLevel: gameSettings.intoxicationLevel
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to re-roll rules');
+			}
+
+			const data = await response.json();
+			rules = data.rules.map((rule: any, index: number) => ({
+				...rule,
+				id: `temp-${Date.now()}-${index}`,
+				order: index + 1,
+				isCustom: false
+			}));
+		} catch (err) {
+			error = 'Failed to re-roll rules';
+			console.error(err);
+		} finally {
+			isRerolling = false;
+		}
+	}
+
+	async function rerollSingleRule(ruleIndex: number) {
+		if (!gameSettings) return;
+
+		const ruleId = rules[ruleIndex].id;
+		rerollingRules.add(ruleId);
+		
+		try {
+			const response = await fetch('/api/games/generate-rules', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					videoId: gameSettings.videoId,
+					videoTitle: gameSettings.videoTitle,
+					numberOfRules: 1,
+					intoxicationLevel: gameSettings.intoxicationLevel
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to re-roll rule');
+			}
+
+			const data = await response.json();
+			const newRule = {
+				...data.rules[0],
+				id: `temp-${Date.now()}-${ruleIndex}`,
+				order: ruleIndex + 1,
+				isCustom: false
+			};
+
+			rules = rules.map((rule, index) => (index === ruleIndex ? newRule : rule));
+		} catch (err) {
+			error = 'Failed to re-roll rule';
+			console.error(err);
+		} finally {
+			rerollingRules.delete(ruleId);
+		}
+	}
+
 	async function addCustomRule() {
-		if (!customRuleText.trim()) return;
+		if (!gameSettings || !customRuleText.trim()) return;
 
 		isAddingRule = true;
 		try {
@@ -206,14 +267,8 @@
 		rules = rules.map((rule, index) => ({ ...rule, order: index + 1 }));
 	}
 
-	function updateRuleDrink(ruleId: string, newDrink: number) {
-		rules = rules.map(rule => 
-			rule.id === ruleId ? { ...rule, baseDrink: newDrink } : rule
-		);
-	}
-
 	async function generateGame() {
-		if (!gameSettings) return;
+		if (!gameSettings || rules.length === 0) return;
 
 		isGenerating = true;
 		try {
@@ -223,12 +278,17 @@
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
+					title: `${gameSettings.videoTitle} Drinking Game`,
 					videoId: gameSettings.videoId,
 					videoTitle: gameSettings.videoTitle,
 					videoThumbnail: gameSettings.videoThumbnail,
 					intoxicationLevel: gameSettings.intoxicationLevel,
-					numberOfRules: gameSettings.numberOfRules,
-					customRules: rules.filter(rule => rule.isCustom)
+					rules: rules.map(rule => ({
+						text: rule.text,
+						category: rule.category,
+						baseDrink: rule.baseDrink,
+						isCustom: rule.isCustom || false
+					}))
 				})
 			});
 
@@ -236,8 +296,8 @@
 				throw new Error('Failed to create game');
 			}
 
-			const game = await response.json();
-			goto(`/game/${game.id}`);
+			const data = await response.json();
+			goto(`/game/${data.game.id}`);
 		} catch (err) {
 			error = 'Failed to generate game';
 			console.error(err);
@@ -246,802 +306,473 @@
 		}
 	}
 
-	function goBack() {
-		const params = new URLSearchParams();
-		if (gameSettings) {
-			params.set('videoId', gameSettings.videoId);
-			params.set('intoxicationLevel', gameSettings.intoxicationLevel.toString());
-			params.set('ruleIndex', ruleIndex[0].toString());
-		}
-		goto(`/?${params.toString()}`);
-	}
-
-	function getDrinkName(drink: number): string {
-		const drinks = ['Sip', 'Gulp', 'Pull', 'Shot'];
-		return drinks[drink] || 'Sip';
-	}
-
 	function getCategoryLabel(category: string): string {
 		return category.charAt(0).toUpperCase() + category.slice(1);
 	}
+
+	function closeModal() {
+		showCustomRuleModal = false;
+		customRuleText = '';
+		customRuleCategory = CategoryEnum.General;
+		customRuleDrink = DrinkEnum.Sip;
+	}
 </script>
 
-<div class="game-settings">
-	<div class="header">
-		<h1>🎯 Game Settings</h1>
-		<p>Configure your drinking game before generation</p>
+{#if isLoading}
+	<div class="loading-state">
+		<div class="loading"></div>
+		<p>Loading game setup...</p>
 	</div>
-
-	{#if error}
+{:else if error}
+	<div class="error-container">
 		<div class="error-message">
 			<svg class="error-icon" fill="currentColor" viewBox="0 0 20 20">
 				<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
 			</svg>
-			{error}
+			<div>
+				<h2>Error</h2>
+				<p>{error}</p>
+			</div>
 		</div>
-	{/if}
+		<a href="/" class="btn btn-primary">Go Home</a>
+	</div>
+{:else if gameSettings}
+	<div class="game-summary-page">
+		<div class="page-header">
+			<h1 class="page-title">🎬 Create Your Drinking Game</h1>
+			<p class="page-subtitle">Customize your settings and rules before generating your game</p>
+		</div>
 
-	{#if gameSettings}
-		<div class="settings-grid">
-			<!-- Video Selection - Compact -->
-			<div class="setting-card video-card">
-				<div class="video-display">
-					<img src={gameSettings.videoThumbnail} alt={gameSettings.videoTitle} />
+		<div class="game-setup">
+			<div class="video-selection">
+				<h2 class="section-title">Selected Video</h2>
+				<div class="selected-video">
+					<img src={gameSettings.videoThumbnail} alt={gameSettings.videoTitle} class="video-thumbnail" />
 					<div class="video-info">
-						<h3>{gameSettings.videoTitle}</h3>
-						<span class="video-status">Selected</span>
+						<h3 class="video-title">{gameSettings.videoTitle}</h3>
+						<button class="btn btn-secondary" on:click={() => showVideoSelectionModal = true}>
+							Change Video
+						</button>
 					</div>
 				</div>
-				<button class="change-video-btn" on:click={() => showVideoSelectionModal = true}>
-					Change Video
-				</button>
 			</div>
 
-			<!-- Intoxication Level -->
-			<div class="setting-card">
-				<h3>🍻 Intoxication Level</h3>
-				<div class="iso-dial">
-					<svg class="dial-svg" height="120" viewBox="0 0 200 200" width="120">
-						<defs>
-							<radialGradient id="metal" cx="50%" cy="50%" r="50%">
-								<stop offset="0%" stop-color="#e5e7eb" />
-								<stop offset="100%" stop-color="#d1d5db" />
-							</radialGradient>
-						</defs>
-						<circle cx="100" cy="100" r="98" fill="url(#metal)" stroke="#9ca3af" stroke-width="2" />
-						<g class="knurl">
-							{#each Array(40) as _, i}
-								<rect
-									x="98"
-									y="2"
-									width="4"
-									height="16"
-									rx="2"
-									fill="#9ca3af"
-									stroke="#6b7280"
-									stroke-width="0.5"
-									transform="rotate({i * 9} 100 100)"
-								/>
+			<div class="settings-grid">
+				<div class="setting-card">
+					<h3 class="setting-title">🍻 Intoxication Level</h3>
+					<div class="iso-dial">
+						<div class="iso-values">
+							{#each isoValues as value, index}
+								<button
+									class="iso-value"
+									class:active={index === isoIndex}
+									on:click={() => isoIndex = index}
+								>
+									{value}
+								</button>
 							{/each}
-						</g>
-						<circle cx="100" cy="100" r="80" fill="#f9fafb" stroke="#d1d5db" stroke-width="2" />
-						<polygon
-							points="100,18 108,38 92,38"
-							fill="#3b82f6"
-							stroke="#1e40af"
-							stroke-width="2"
-						/>
-						<text class="dial-number" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#374151">
-							<textPath startOffset="0%" xlink:href="#arc1">100</textPath>
-						</text>
-						<text class="dial-number" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#374151">
-							<textPath startOffset="0%" xlink:href="#arc2">200</textPath>
-						</text>
-						<text class="dial-number" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#374151">
-							<textPath startOffset="0%" xlink:href="#arc3">400</textPath>
-						</text>
-						<text class="dial-number" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#374151">
-							<textPath startOffset="0%" xlink:href="#arc4">800</textPath>
-						</text>
-						<text class="dial-number" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#374151">
-							<textPath startOffset="0%" xlink:href="#arc5">1600</textPath>
-						</text>
-						<text class="dial-program" font-family="'Inter', sans-serif" font-size="10" font-weight="600" fill="#10b981">
-							<textPath startOffset="0%" xlink:href="#arc6">PROGRAM</textPath>
-						</text>
-						<path id="arc1" d="M 100 30 A 70 70 0 0 1 170 100" fill="none" />
-						<path id="arc2" d="M 170 100 A 70 70 0 0 1 100 170" fill="none" />
-						<path id="arc3" d="M 100 170 A 70 70 0 0 1 30 100" fill="none" />
-						<path id="arc4" d="M 30 100 A 70 70 0 0 1 100 30" fill="none" />
-						<path id="arc5" d="M 100 30 A 70 70 0 0 1 135 45" fill="none" />
-						<path id="arc6" d="M 135 45 A 70 70 0 0 1 100 30" fill="none" />
-					</svg>
-					<input
-						type="range"
-						class="dial-input"
-						min="0"
-						max="5"
-						step="1"
-						bind:value={isoIndex}
-						on:input={handleDialChange}
-					/>
-					<div class="dial-center">
-						<span class="current-value">{selectedISO}</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="setting-card">
+					<h3 class="setting-title">📸 Number of Rules</h3>
+					<div class="format-selector">
+						{#each filmFormats as format, index}
+							<button
+								class="format-option"
+								class:active={index === selectedFormatIndex}
+								on:click={() => selectedFormatIndex = index}
+							>
+								<span class="format-label">{format.label}</span>
+								<span class="format-value">{format.value} rules</span>
+							</button>
+						{/each}
 					</div>
 				</div>
 			</div>
 
-			<!-- Number of Rules -->
-			<div class="setting-card">
-				<h3>📜 Film Format</h3>
-				<div class="format-buttons">
-					{#each filmFormats as format, i}
-						<button
-							class="format-button {ruleIndex[0] === i ? 'selected' : ''}"
-							on:click={() => (ruleIndex = [i])}
-						>
-							{format.label}
-							<span class="rule-count">({format.value})</span>
-						</button>
-					{/each}
+			{#if rules.length === 0}
+				<div class="generate-section">
+					<button class="btn btn-primary btn-large" on:click={generateRules} disabled={isGeneratingRules}>
+						{#if isGeneratingRules}
+							<span class="loading"></span>
+							<span>Generating Rules...</span>
+						{:else}
+							<span>🎲</span>
+							<span>Generate Rules</span>
+						{/if}
+					</button>
 				</div>
-			</div>
-
-			<!-- Custom Rules -->
-			<div class="setting-card rules-card">
-				<div class="rules-header">
-					<h3>🎲 Custom Rules</h3>
-					<div class="rules-actions">
-						<button class="generate-rules-btn" on:click={generateRules} disabled={isGeneratingRules}>
-							{#if isGeneratingRules}
-								<span class="loading"></span>
-								<span>Generating...</span>
-							{:else}
-								<span>🎲</span>
-								<span>Generate Rules</span>
-							{/if}
-						</button>
-						<button class="add-rule-btn" on:click={() => showCustomRuleModal = true}>
-							<span>+</span>
-							<span>Add Rule</span>
-						</button>
-					</div>
-				</div>
-				
-				{#if rules.length > 0}
-					<div class="rules-table-container">
-						<table class="rules-table">
-							<thead>
-								<tr>
-									<th>Rule</th>
-									<th>Category</th>
-									<th>Drink</th>
-									<th>Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each rules as rule (rule.id)}
-									<tr class="rule-row">
-										<td class="rule-text-cell">
-											<span class="rule-text">{rule.text}</span>
-											{#if rule.isCustom}
-												<span class="custom-badge">Custom</span>
-											{/if}
-										</td>
-										<td class="rule-category-cell">
-											<span class="rule-category">{getCategoryLabel(rule.category)}</span>
-										</td>
-										<td class="rule-drink-cell">
-											<select 
-												class="drink-select"
-												value={rule.baseDrink}
-												on:change={(e) => updateRuleDrink(rule.id, parseInt((e.target as HTMLSelectElement).value))}
-											>
-												{#each Object.values(DrinkEnum) as drink}
-													<option value={drink}>{getDrinkName(drink)}</option>
-												{/each}
-											</select>
-										</td>
-										<td class="rule-actions-cell">
-											<button class="delete-rule-btn" on:click={() => deleteRule(rule.id)}>
-												×
-											</button>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{:else}
-					<div class="empty-rules">
-						<p>No rules added yet</p>
-						<div class="empty-actions">
-							<button class="generate-first-rules-btn" on:click={generateRules} disabled={isGeneratingRules}>
-								{#if isGeneratingRules}
+			{:else}
+				<div class="rules-section">
+					<div class="rules-header">
+						<h2 class="section-title">📜 Your Rules</h2>
+						<div class="rules-actions">
+							<button class="btn btn-primary" on:click={rerollRules} disabled={isRerolling}>
+								{#if isRerolling}
 									<span class="loading"></span>
-									<span>Generating...</span>
+									<span>Rerolling...</span>
 								{:else}
 									<span>🎲</span>
-									<span>Generate Rules</span>
+									<span>Reroll All</span>
 								{/if}
 							</button>
-							<button class="add-first-rule-btn" on:click={() => showCustomRuleModal = true}>
-								Add your first rule
-							</button>
+
+							<Dialog.Root bind:open={showCustomRuleModal}>
+								<Dialog.Trigger>
+									<button class="btn btn-success">
+										<span>✨</span>
+										<span>Add Custom Rule</span>
+									</button>
+								</Dialog.Trigger>
+								<Dialog.Portal>
+									<Dialog.Overlay class="modal-overlay" />
+									<Dialog.Content class="modal-content">
+										<Dialog.Title class="modal-title">✨ Add a Custom Rule</Dialog.Title>
+										<form on:submit|preventDefault={addCustomRule}>
+											<div class="form-group">
+												<label for="custom-rule-text" class="form-label">Rule Description</label>
+												<textarea
+													id="custom-rule-text"
+													bind:value={customRuleText}
+													placeholder="e.g., Every time someone laughs, take a sip."
+													rows="3"
+													required
+													class="form-input"
+												></textarea>
+											</div>
+											<div class="form-row">
+												<div class="form-group">
+													<label for="custom-rule-category" class="form-label">Category</label>
+													<select id="custom-rule-category" bind:value={customRuleCategory} class="form-input">
+														{#each Object.values(CategoryEnum) as category}
+															<option value={category}>{getCategoryLabel(category)}</option>
+														{/each}
+													</select>
+												</div>
+												<div class="form-group">
+													<label for="custom-rule-drink" class="form-label">Drink</label>
+													<select id="custom-rule-drink" bind:value={customRuleDrink} class="form-input">
+														{#each Object.entries(DrinkEnum) as [key, value]}
+															{#if !isNaN(Number(key))}
+																<option value={key}>{getDrinkName(Number(key)).name}</option>
+															{/if}
+														{/each}
+													</select>
+												</div>
+											</div>
+											<div class="modal-actions">
+												<Dialog.Close>
+													<button type="button" class="btn btn-secondary">Cancel</button>
+												</Dialog.Close>
+												<button type="submit" class="btn btn-success" disabled={isAddingRule}>
+													{#if isAddingRule}
+														<span class="loading"></span>
+														<span>Adding...</span>
+													{:else}
+														<span>Add Rule</span>
+													{/if}
+												</button>
+											</div>
+										</form>
+									</Dialog.Content>
+								</Dialog.Portal>
+							</Dialog.Root>
 						</div>
 					</div>
-				{/if}
-			</div>
-		</div>
 
-		<!-- Action Buttons -->
-		<div class="action-buttons">
-			<button class="btn btn-secondary" on:click={goBack}>
-				<span>⬅️</span>
-				<span>Back</span>
-			</button>
-			<button class="btn btn-primary" on:click={generateGame} disabled={isGenerating}>
-				{#if isGenerating}
-					<span class="loading"></span>
-					<span>Generating...</span>
-				{:else}
-					<span>🚀</span>
-					<span>Generate Game</span>
-				{/if}
-			</button>
-		</div>
-	{:else}
-		<div class="loading-state">
-			<div class="loading"></div>
-			<p>Loading settings...</p>
-		</div>
-	{/if}
-</div>
+					<div class="rules-grid">
+						{#each rules as rule, index (rule.id)}
+							<div class="rule-card" class:custom-rule={rule.isCustom}>
+								{#if rule.isCustom}
+									<div class="custom-badge">Custom</div>
+								{/if}
+								<div class="rule-header">
+									<div class="rule-number">{index + 1}</div>
+									<div class="drink-info">
+										<span class="drink-icon">{getDrinkName(rule.baseDrink).icon}</span>
+										<span class="drink-name">{getDrinkName(rule.baseDrink).name}</span>
+									</div>
+								</div>
 
-<!-- Video Selection Modal -->
-<Dialog.Root bind:open={showVideoSelectionModal}>
-	<Dialog.Content class="modal video-selection-modal">
-		<div class="modal-header">
-			<h2>Select a Video</h2>
-			<button class="close-btn" on:click={() => showVideoSelectionModal = false}>×</button>
-		</div>
-		
-		<div class="modal-content">
-			<div class="videos-grid">
-				{#each videos.slice(0, 12) as video (video.id)}
-					<div class="video-option {gameSettings?.videoId === video.id ? 'selected' : ''}" on:click={() => selectVideo(video)}>
-						<img src={video.thumbnail} alt={video.title} />
-						<div class="video-option-info">
-							<h4>{video.title}</h4>
-							{#if gameSettings?.videoId === video.id}
-								<span class="current-indicator">Currently Selected</span>
+								<div class="rule-content">
+									<p class="rule-text">{rule.text}</p>
+								</div>
+
+								<div class="rule-footer">
+									<span class="rule-category">{getCategoryLabel(rule.category)}</span>
+									<div class="rule-actions">
+										<button
+											class="action-btn reroll-btn"
+											on:click={() => rerollSingleRule(index)}
+											disabled={rerollingRules.has(rule.id)}
+											aria-label="Reroll rule"
+										>
+											{#if rerollingRules.has(rule.id)}
+												<div class="loading"></div>
+											{:else}
+												🎲
+											{/if}
+										</button>
+										<button
+											class="action-btn delete-btn"
+											on:click={() => deleteRule(rule.id)}
+											aria-label="Delete rule"
+										>
+											🗑️
+										</button>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+
+					<div class="finalize-section">
+						<button class="btn btn-primary btn-large" on:click={generateGame} disabled={isGenerating}>
+							{#if isGenerating}
+								<span class="loading"></span>
+								<span>Creating Game...</span>
+							{:else}
+								<span>🚀</span>
+								<span>Generate Game</span>
 							{/if}
-						</div>
+						</button>
+						<p class="finalize-note">This will create your shareable drinking game!</p>
 					</div>
-				{/each}
-			</div>
+				</div>
+			{/if}
 		</div>
-		
-		<div class="modal-footer">
-			<button class="btn btn-secondary" on:click={() => showVideoSelectionModal = false}>
-				Cancel
-			</button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+	</div>
 
-<!-- Custom Rule Modal -->
-<Dialog.Root bind:open={showCustomRuleModal}>
-	<Dialog.Content class="modal">
-		<div class="modal-header">
-			<h2>Add Custom Rule</h2>
-			<button class="close-btn" on:click={() => showCustomRuleModal = false}>×</button>
-		</div>
-		
-		<div class="modal-content">
-			<div class="form-group">
-				<label for="rule-text">Rule Text</label>
-				<textarea
-					id="rule-text"
-					bind:value={customRuleText}
-					placeholder="Enter your custom drinking rule..."
-					rows="3"
-				></textarea>
-			</div>
-			
-			<div class="form-row">
-				<div class="form-group">
-					<label for="rule-category">Category</label>
-					<select id="rule-category" bind:value={customRuleCategory}>
-						{#each Object.values(CategoryEnum) as category}
-							<option value={category}>{getCategoryLabel(category)}</option>
-						{/each}
-					</select>
+	<!-- Video Selection Modal -->
+	<Dialog.Root bind:open={showVideoSelectionModal}>
+		<Dialog.Portal>
+			<Dialog.Overlay class="modal-overlay" />
+			<Dialog.Content class="modal-content video-selection-modal">
+				<Dialog.Title class="modal-title">🎬 Choose a Different Video</Dialog.Title>
+				<div class="videos-grid">
+					{#each videos.slice(0, 12) as video (video.id)}
+						<div class="video-option {gameSettings?.videoId === video.id ? 'selected' : ''}" on:click={() => selectVideo(video)}>
+							<img src={video.thumbnail} alt={video.title} />
+							<div class="video-option-info">
+								<h4>{video.title}</h4>
+							</div>
+						</div>
+					{/each}
 				</div>
-				
-				<div class="form-group">
-					<label for="rule-drink">Drink Amount</label>
-					<select id="rule-drink" bind:value={customRuleDrink}>
-						{#each Object.values(DrinkEnum) as drink}
-							<option value={drink}>{getDrinkName(drink)}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-		</div>
-		
-		<div class="modal-footer">
-			<button class="btn btn-secondary" on:click={() => showCustomRuleModal = false}>
-				Cancel
-			</button>
-			<button class="btn btn-primary" on:click={addCustomRule} disabled={isAddingRule || !customRuleText.trim()}>
-				{#if isAddingRule}
-					<span class="loading"></span>
-					Adding...
-				{:else}
-					Add Rule
-				{/if}
-			</button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+			</Dialog.Content>
+		</Dialog.Portal>
+	</Dialog.Root>
+{/if}
 
 <style>
-	.game-settings {
+	/* Base styles */
+	.loading-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		padding: 4rem 2rem;
+		color: #6b7280;
+	}
+
+	.error-container {
+		text-align: center;
+		padding: 4rem 2rem;
+		max-width: 600px;
+		margin: 0 auto;
+	}
+
+	.error-message {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		color: #991b1b;
+		padding: 1.5rem;
+		border-radius: 8px;
+		margin-bottom: 2rem;
+		text-align: left;
+	}
+
+	.error-icon {
+		width: 24px;
+		height: 24px;
+		flex-shrink: 0;
+	}
+
+	.game-summary-page {
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 0 1rem;
 	}
 
-	.header {
+	.page-header {
 		text-align: center;
-		margin-bottom: 2rem;
-		padding: 1.5rem 0;
+		margin-bottom: 3rem;
 	}
 
-	.header h1 {
-		font-size: 2rem;
+	.page-title {
+		font-size: 2.5rem;
 		font-weight: 700;
 		color: #1f2937;
 		margin: 0 0 0.5rem 0;
 		letter-spacing: -0.025em;
 	}
 
-	.header p {
-		font-size: 1rem;
+	.page-subtitle {
+		font-size: 1.125rem;
 		color: #6b7280;
 		margin: 0;
 	}
 
-	.error-message {
+	.game-setup {
 		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		background: #fef2f2;
-		border: 1px solid #fecaca;
-		color: #991b1b;
-		padding: 1rem;
-		border-radius: 8px;
-		margin-bottom: 2rem;
-		font-weight: 500;
+		flex-direction: column;
+		gap: 3rem;
 	}
 
-	.error-icon {
-		width: 20px;
-		height: 20px;
-		flex-shrink: 0;
+	.video-selection {
+		background: #ffffff;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
+		padding: 2rem;
+	}
+
+	.section-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
+		margin: 0 0 1.5rem 0;
+	}
+
+	.selected-video {
+		display: flex;
+		gap: 1.5rem;
+		align-items: center;
+	}
+
+	.video-thumbnail {
+		width: 160px;
+		height: 120px;
+		object-fit: cover;
+		border-radius: 8px;
+		border: 1px solid #e5e7eb;
+	}
+
+	.video-info {
+		flex: 1;
+	}
+
+	.video-title {
+		font-size: 1.125rem;
+		font-weight: 500;
+		color: #1f2937;
+		margin: 0 0 1rem 0;
 	}
 
 	.settings-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-		gap: 1.5rem;
-		margin-bottom: 2rem;
+		grid-template-columns: 1fr 1fr;
+		gap: 2rem;
 	}
 
 	.setting-card {
 		background: #ffffff;
 		border: 1px solid #e5e7eb;
 		border-radius: 12px;
-		padding: 1.25rem;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+		padding: 2rem;
 	}
 
-	.setting-card h3 {
-		font-size: 1.125rem;
+	.setting-title {
+		font-size: 1.25rem;
 		font-weight: 600;
 		color: #1f2937;
-		margin: 0 0 1rem 0;
+		margin: 0 0 1.5rem 0;
 	}
 
-	/* Video Card */
-	.video-card {
-		grid-column: 1 / -1;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.video-display {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		flex: 1;
-	}
-
-	.video-display img {
-		width: 80px;
-		height: 60px;
-		object-fit: cover;
-		border-radius: 8px;
-		flex-shrink: 0;
-	}
-
-	.video-info h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		color: #1f2937;
-		margin: 0 0 0.25rem 0;
-		line-height: 1.3;
-	}
-
-	.video-status {
-		font-size: 0.8rem;
-		color: #10b981;
-		background: #d1fae5;
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
-		font-weight: 500;
-	}
-
-	.change-video-btn {
-		background: #3b82f6;
-		color: #ffffff;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		white-space: nowrap;
-	}
-
-	.change-video-btn:hover {
-		background: #2563eb;
-	}
-
-	/* ISO Dial */
 	.iso-dial {
-		position: relative;
 		display: flex;
 		justify-content: center;
-		margin-top: 1rem;
 	}
 
-	.dial-svg {
-		display: block;
+	.iso-values {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		justify-content: center;
 	}
 
-	.dial-input {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 96px;
-		height: 96px;
-		opacity: 0;
-		cursor: pointer;
-	}
-
-	.dial-center {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		background: #ffffff;
+	.iso-value {
+		background: #f3f4f6;
 		border: 2px solid #e5e7eb;
-		border-radius: 50%;
-		width: 40px;
-		height: 40px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 600;
-		color: #1f2937;
-		font-size: 0.75rem;
-	}
-
-	/* Format Buttons */
-	.format-buttons {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 0.75rem;
-		margin-top: 1rem;
-	}
-
-	.format-button {
-		background: #f9fafb;
 		color: #374151;
-		border: 1px solid #e5e7eb;
-		padding: 0.75rem 0.5rem;
+		padding: 0.75rem 1rem;
 		border-radius: 8px;
 		cursor: pointer;
-		transition: all 0.2s ease;
-		font-size: 0.875rem;
 		font-weight: 500;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
+		transition: all 0.2s ease;
+		min-width: 60px;
 	}
 
-	.format-button:hover {
-		background: #f3f4f6;
+	.iso-value:hover {
+		background: #e5e7eb;
 		border-color: #d1d5db;
 	}
 
-	.format-button.selected {
+	.iso-value.active {
 		background: #3b82f6;
-		color: #ffffff;
 		border-color: #3b82f6;
+		color: #ffffff;
 	}
 
-	.rule-count {
-		font-size: 0.75rem;
-		opacity: 0.8;
+	.format-selector {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
-	/* Rules Card */
-	.rules-card {
-		grid-column: 1 / -1;
-	}
-
-	.rules-header {
+	.format-option {
+		background: #f3f4f6;
+		border: 2px solid #e5e7eb;
+		color: #374151;
+		padding: 0.75rem 1rem;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.2s ease;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1rem;
 	}
 
-	.rules-actions {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.generate-rules-btn {
-		background: #3b82f6;
-		color: #ffffff;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.generate-rules-btn:hover:not(:disabled) {
-		background: #2563eb;
-	}
-
-	.generate-rules-btn:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-
-	.add-rule-btn {
-		background: #10b981;
-		color: #ffffff;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.generate-rules-btn:hover,
-	.add-rule-btn:hover {
-		background: #059669;
-	}
-
-	.rules-table-container {
-		overflow-x: auto;
-		border: 1px solid #e5e7eb;
-		border-radius: 8px;
-	}
-
-	.rules-table {
-		width: 100%;
-		border-collapse: collapse;
-		border-spacing: 0;
-		font-size: 0.875rem;
-		color: #374151;
-	}
-
-	.rules-table th,
-	.rules-table td {
-		padding: 0.75rem 1rem;
-		text-align: left;
-		border-bottom: 1px solid #e5e7eb;
-	}
-
-	.rules-table th {
-		font-weight: 600;
-		color: #1f2937;
-		background: #f9fafb;
-	}
-
-	.rules-table tbody tr:last-child td {
-		border-bottom: none;
-	}
-
-	.rule-row {
-		transition: background-color 0.2s ease;
-	}
-
-	.rule-row:hover {
-		background: #f3f4f6;
-	}
-
-	.rule-text-cell {
-		position: relative;
-		max-width: 300px;
-	}
-
-	.rule-text {
-		font-size: 0.875rem;
-		color: #1f2937;
-		font-weight: 500;
-		line-height: 1.4;
-		display: block;
-	}
-
-	.custom-badge {
-		position: absolute;
-		top: -5px;
-		right: -5px;
-		background: #ef4444;
-		color: #ffffff;
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
-		font-size: 0.625rem;
-		font-weight: 600;
-		white-space: nowrap;
-	}
-
-	.rule-category-cell {
-		width: 150px;
-	}
-
-	.rule-category {
-		font-size: 0.75rem;
-		color: #6b7280;
+	.format-option:hover {
 		background: #e5e7eb;
-		padding: 0.125rem 0.375rem;
-		border-radius: 4px;
+		border-color: #d1d5db;
 	}
 
-	.rule-drink-cell {
-		width: 100px;
-	}
-
-	.drink-select {
-		width: 100%;
-		padding: 0.5rem;
-		border: 1px solid #d1d5db;
-		border-radius: 6px;
-		font-size: 0.875rem;
-		background: #ffffff;
-		cursor: pointer;
-	}
-
-	.drink-select:focus {
-		outline: none;
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-	}
-
-	.rule-actions-cell {
-		width: 50px;
-		text-align: center;
-	}
-
-	.delete-rule-btn {
-		background: #ef4444;
-		color: #ffffff;
-		border: none;
-		width: 24px;
-		height: 24px;
-		border-radius: 50%;
-		cursor: pointer;
-		font-size: 1rem;
-		font-weight: bold;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s ease;
-	}
-
-	.delete-rule-btn:hover {
-		background: #dc2626;
-	}
-
-	.empty-rules {
-		text-align: center;
-		padding: 2rem 0;
-		color: #6b7280;
-	}
-
-	.empty-rules p {
-		margin: 0 0 1rem 0;
-		font-size: 0.875rem;
-	}
-
-	.empty-actions {
-		display: flex;
-		gap: 0.75rem;
-		justify-content: center;
-	}
-
-	.generate-first-rules-btn {
+	.format-option.active {
 		background: #3b82f6;
+		border-color: #3b82f6;
 		color: #ffffff;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		font-size: 0.875rem;
+	}
+
+	.format-label {
 		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
 	}
 
-	.generate-first-rules-btn:hover:not(:disabled) {
-		background: #2563eb;
-	}
-
-	.generate-first-rules-btn:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-
-	.add-first-rule-btn {
-		background: #10b981;
-		color: #ffffff;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
+	.format-value {
 		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
+		opacity: 0.8;
 	}
 
-	.generate-first-rules-btn:hover,
-	.add-first-rule-btn:hover {
-		background: #059669;
-	}
-
-	/* Action Buttons */
-	.action-buttons {
-		display: flex;
-		justify-content: center;
-		gap: 1rem;
-		flex-wrap: wrap;
+	.generate-section {
+		text-align: center;
 	}
 
 	.btn {
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.75rem 1.5rem;
@@ -1051,15 +782,7 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 		border: none;
-	}
-
-	.btn-secondary {
-		background: #f3f4f6;
-		color: #374151;
-	}
-
-	.btn-secondary:hover {
-		background: #e5e7eb;
+		text-decoration: none;
 	}
 
 	.btn-primary {
@@ -1071,148 +794,298 @@
 		background: #2563eb;
 	}
 
+	.btn-secondary {
+		background: #f3f4f6;
+		color: #374151;
+	}
+
+	.btn-secondary:hover {
+		background: #e5e7eb;
+	}
+
+	.btn-success {
+		background: #10b981;
+		color: #ffffff;
+	}
+
+	.btn-success:hover:not(:disabled) {
+		background: #059669;
+	}
+
 	.btn:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
 	}
 
-	.loading-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1rem;
-		padding: 3rem 0;
-		color: #6b7280;
+	.btn-large {
+		padding: 1rem 2rem;
+		font-size: 1.125rem;
 	}
 
-	/* Modal Styles */
-	.modal {
+	.rules-section {
 		background: #ffffff;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
+		padding: 2rem;
+	}
+
+	.rules-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 2rem;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.rules-actions {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.rules-grid {
+		display: grid;
+		gap: 1.5rem;
+		margin-bottom: 3rem;
+	}
+
+	.rule-card {
+		background: #ffffff;
+		border: 1px solid #e5e7eb;
 		border-radius: 12px;
 		padding: 1.5rem;
+		position: relative;
+		transition: all 0.2s ease;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.rule-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	}
+
+	.rule-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.rule-number {
+		background: #3b82f6;
+		color: #ffffff;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 600;
+		font-size: 0.875rem;
+		flex-shrink: 0;
+	}
+
+	.drink-info {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.drink-icon {
+		font-size: 1.25rem;
+	}
+
+	.drink-name {
+		font-size: 0.875rem;
+		color: #6b7280;
+		font-weight: 500;
+	}
+
+	.rule-content {
+		margin-bottom: 1rem;
+	}
+
+	.rule-text {
+		margin: 0;
+		font-size: 1rem;
+		line-height: 1.5;
+		color: #1f2937;
+	}
+
+	.rule-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.rule-category {
+		background: #f3f4f6;
+		color: #374151;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+	}
+
+	.rule-actions {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.action-btn {
+		background: transparent;
+		border: 1px solid #e5e7eb;
+		color: #6b7280;
+		padding: 0.5rem;
+		border-radius: 8px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		font-size: 1rem;
+		transition: all 0.2s ease;
+	}
+
+	.action-btn:hover {
+		background: #f9fafb;
+		border-color: #d1d5db;
+	}
+
+	.delete-btn:hover {
+		background: #fef2f2;
+		border-color: #fecaca;
+		color: #dc2626;
+	}
+
+	.reroll-btn:hover:not(:disabled) {
+		background: #eff6ff;
+		border-color: #bfdbfe;
+		color: #3b82f6;
+	}
+
+	.action-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.custom-rule {
+		border-color: #10b981;
+		background: #f0fdf4;
+	}
+
+	.custom-badge {
+		background: #10b981;
+		color: #ffffff;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+	}
+
+	.finalize-section {
+		text-align: center;
+		padding-top: 2rem;
+		border-top: 1px solid #e5e7eb;
+	}
+
+	.finalize-note {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin: 0.5rem 0 0 0;
+	}
+
+	/* Modal styles */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 50;
+		backdrop-filter: blur(4px);
+	}
+
+	.modal-content {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: #ffffff;
+		padding: 2rem;
+		border-radius: 12px;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+		width: 90%;
 		max-width: 500px;
-		width: 90vw;
-		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+		z-index: 50;
+		border: 1px solid #e5e7eb;
 	}
 
 	.video-selection-modal {
 		max-width: 800px;
 	}
 
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1rem;
-		padding-bottom: 1rem;
-		border-bottom: 1px solid #e5e7eb;
-	}
-
-	.modal-header h2 {
-		font-size: 1.25rem;
-		font-weight: 600;
+	.modal-title {
+		margin: 0 0 1.5rem 0;
 		color: #1f2937;
-		margin: 0;
-	}
-
-	.close-btn {
-		background: none;
-		border: none;
 		font-size: 1.5rem;
-		color: #6b7280;
-		cursor: pointer;
-		padding: 0;
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 4px;
-		transition: all 0.2s ease;
+		font-weight: 600;
 	}
 
-	.close-btn:hover {
-		background: #f3f4f6;
-		color: #374151;
-	}
-
-	.modal-content {
-		margin: 1rem 0;
-	}
-
-	.modal-footer {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.75rem;
-		padding-top: 1rem;
-		border-top: 1px solid #e5e7eb;
-	}
-
-	/* Video Selection Grid */
 	.videos-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 		gap: 1rem;
-		max-height: 400px;
+		max-height: 60vh;
 		overflow-y: auto;
 	}
 
 	.video-option {
-		background: #f9fafb;
 		border: 2px solid #e5e7eb;
 		border-radius: 8px;
-		padding: 0.75rem;
+		overflow: hidden;
 		cursor: pointer;
 		transition: all 0.2s ease;
 	}
 
 	.video-option:hover {
-		background: #f3f4f6;
-		border-color: #d1d5db;
+		border-color: #3b82f6;
+		transform: scale(1.02);
 	}
 
 	.video-option.selected {
-		background: #dbeafe;
-		border-color: #3b82f6;
+		border-color: #10b981;
+		background: #f0fdf4;
 	}
 
 	.video-option img {
 		width: 100%;
-		height: 100px;
+		height: 120px;
 		object-fit: cover;
-		border-radius: 6px;
-		margin-bottom: 0.5rem;
+	}
+
+	.video-option-info {
+		padding: 0.75rem;
 	}
 
 	.video-option-info h4 {
+		margin: 0;
 		font-size: 0.875rem;
-		font-weight: 600;
-		color: #1f2937;
-		margin: 0 0 0.25rem 0;
-		line-height: 1.3;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
-	.current-indicator {
-		font-size: 0.75rem;
-		color: #3b82f6;
 		font-weight: 500;
+		color: #1f2937;
+		line-height: 1.3;
 	}
 
 	.form-group {
 		margin-bottom: 1rem;
 	}
 
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
-
-	.form-group label {
+	.form-label {
 		display: block;
 		font-size: 0.875rem;
 		font-weight: 500;
@@ -1220,8 +1093,7 @@
 		margin-bottom: 0.5rem;
 	}
 
-	.form-group textarea,
-	.form-group select {
+	.form-input {
 		width: 100%;
 		padding: 0.75rem;
 		border: 1px solid #d1d5db;
@@ -1230,273 +1102,99 @@
 		background: #ffffff;
 	}
 
-	.form-group textarea:focus,
-	.form-group select:focus {
+	.form-input:focus {
 		outline: none;
 		border-color: #3b82f6;
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 	}
 
+	.form-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 1rem;
+		justify-content: flex-end;
+		margin-top: 1.5rem;
+	}
+
+	.loading {
+		width: 16px;
+		height: 16px;
+		border: 2px solid transparent;
+		border-top: 2px solid currentColor;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+
 	/* Responsive design */
 	@media (max-width: 768px) {
-		.header h1 {
-			font-size: 1.75rem;
-		}
-
 		.settings-grid {
 			grid-template-columns: 1fr;
-			gap: 1rem;
 		}
 
-		.video-card {
-			flex-direction: column;
-			gap: 1rem;
-			align-items: stretch;
-		}
-
-		.video-display {
+		.selected-video {
 			flex-direction: column;
 			text-align: center;
 		}
 
-		.video-display img {
+		.video-thumbnail {
 			width: 100%;
-			max-width: 200px;
+			max-width: 300px;
 			height: auto;
-		}
-
-		.change-video-btn {
-			width: 100%;
-		}
-
-		.format-buttons {
-			grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 		}
 
 		.rules-header {
 			flex-direction: column;
-			gap: 1rem;
 			align-items: stretch;
 		}
 
 		.rules-actions {
-			flex-direction: column;
-			gap: 0.75rem;
-		}
-
-		.generate-rules-btn,
-		.add-rule-btn {
-			width: 100%;
-		}
-
-		.action-buttons {
-			flex-direction: column;
-		}
-
-		.action-buttons .btn {
-			width: 100%;
+			justify-content: center;
 		}
 
 		.form-row {
 			grid-template-columns: 1fr;
 		}
 
+		.modal-actions {
+			flex-direction: column;
+		}
+
 		.videos-grid {
-			grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+			grid-template-columns: 1fr 1fr;
 		}
 	}
 
 	@media (max-width: 480px) {
-		.game-settings {
+		.game-summary-page {
 			padding: 0 0.5rem;
 		}
 
-		.header {
-			padding: 1rem 0;
-			margin-bottom: 1.5rem;
+		.page-title {
+			font-size: 2rem;
 		}
 
-		.header h1 {
-			font-size: 1.5rem;
+		.setting-card,
+		.video-selection,
+		.rules-section {
+			padding: 1.5rem;
 		}
 
-		.setting-card {
-			padding: 1rem;
-		}
-
-		.rules-header {
-			flex-direction: column;
-			gap: 1rem;
-			align-items: stretch;
-		}
-
-		.rules-actions {
-			flex-direction: column;
-			gap: 0.75rem;
-		}
-
-		.generate-rules-btn,
-		.add-rule-btn {
-			justify-content: center;
-		}
-
-		.rules-table {
-			font-size: 0.75rem;
-		}
-
-		.rules-table th,
-		.rules-table td {
-			padding: 0.5rem 0.75rem;
-		}
-
-		.rule-text-cell {
-			padding-right: 0;
-		}
-
-		.rule-category-cell {
-			width: 100px;
-		}
-
-		.rule-drink-cell {
-			width: 80px;
-		}
-
-		.rule-actions-cell {
-			width: 40px;
-		}
-
-		.delete-rule-btn {
-			font-size: 0.875rem;
-		}
-
-		.empty-rules {
-			padding: 1.5rem 0;
-		}
-
-		.empty-actions {
-			flex-direction: column;
-			gap: 0.75rem;
-		}
-
-		.generate-first-rules-btn,
-		.add-first-rule-btn {
-			width: 100%;
+		.iso-values {
+			grid-template-columns: repeat(3, 1fr);
 		}
 
 		.videos-grid {
 			grid-template-columns: 1fr;
 		}
 	}
-
-	/* Dark mode support */
-	@media (prefers-color-scheme: dark) {
-		.header h1 {
-			color: #f9fafb;
-		}
-
-		.header p {
-			color: #9ca3af;
-		}
-
-		.setting-card {
-			background: #1f2937;
-			border-color: #374151;
-		}
-
-		.setting-card h3 {
-			color: #f9fafb;
-		}
-
-		.video-info h3 {
-			color: #f9fafb;
-		}
-
-		.rule-row {
-			background: #374151;
-			border-color: #4b5563;
-		}
-
-		.rule-row:hover {
-			background: #4b5563;
-		}
-
-		.rule-text {
-			color: #f9fafb;
-		}
-
-		.custom-badge {
-			background: #ef4444;
-			color: #ffffff;
-		}
-
-		.format-button {
-			background: #374151;
-			color: #d1d5db;
-			border-color: #4b5563;
-		}
-
-		.format-button:hover {
-			background: #4b5563;
-			border-color: #6b7280;
-		}
-
-		.dial-center {
-			background: #1f2937;
-			border-color: #374151;
-			color: #f9fafb;
-		}
-
-		.modal {
-			background: #1f2937;
-			border-color: #374151;
-		}
-
-		.modal-header h2 {
-			color: #f9fafb;
-		}
-
-		.modal-header {
-			border-bottom-color: #374151;
-		}
-
-		.modal-footer {
-			border-top-color: #374151;
-		}
-
-		.video-option {
-			background: #374151;
-			border-color: #4b5563;
-		}
-
-		.video-option:hover {
-			background: #4b5563;
-			border-color: #6b7280;
-		}
-
-		.video-option.selected {
-			background: #1e3a8a;
-			border-color: #3b82f6;
-		}
-
-		.video-option-info h4 {
-			color: #f9fafb;
-		}
-
-		.form-group label {
-			color: #f9fafb;
-		}
-
-		.form-group textarea,
-		.form-group select {
-			background: #374151;
-			border-color: #4b5563;
-			color: #f9fafb;
-		}
-
-		.error-message {
-			background: #450a0a;
-			border-color: #7f1d1d;
-			color: #fca5a5;
-		}
-	}
-</style> 
+</style>

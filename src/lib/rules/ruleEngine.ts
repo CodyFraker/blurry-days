@@ -202,6 +202,38 @@ export function getDrinkName(drinkLevel: number): { name: string; icon: string }
   }
 }
 
+export function generateRulesForVideo({ 
+  videoId, 
+  videoTitle, 
+  numberOfRules, 
+  intoxicationLevel 
+}: {
+  videoId: string;
+  videoTitle: string;
+  numberOfRules: number;
+  intoxicationLevel: number;
+}) {
+  // Select rules based on intoxication level and number requested
+  const selectedRules = selectRules(intoxicationLevel, numberOfRules);
+  
+  // Replace {host} placeholder with "the host" or extract from video title if possible
+  const hostName = extractHostName(videoTitle) || "the host";
+  
+  return selectedRules.map((rule, index) => ({
+    text: rule.text.replace(/{host}/g, hostName),
+    category: rule.category,
+    baseDrink: calculateEffectiveDrink(rule.baseDrink, intoxicationLevel - 1), // Adjust for 0-based indexing
+    weight: rule.weight,
+    isCustom: false
+  }));
+}
+
+function extractHostName(videoTitle: string): string | null {
+  // Simple extraction - could be enhanced with more sophisticated logic
+  // For now, just return "the host" as a safe default
+  return "the host";
+}
+
 function shuffleArray<T>(array: readonly T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {

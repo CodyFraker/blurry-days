@@ -12,38 +12,28 @@ const RSSItemSchema = z.object({
 	published: z.string(),
 	updated: z.string(),
 	author: z.object({
-		name: z.string(),
+		name: z.string(), // Back to 'name' as the parser converts it correctly
 		uri: z.string()
 	}),
 	'media:group': z.object({
 		'media:title': z.string(),
 		'media:description': z.string(),
-		'media:thumbnail': z.array(
-			z.object({
-				$: z.object({
-					url: z.string(),
-					width: z.string(),
-					height: z.string()
-				})
-			})
-		),
-		'media:content': z.array(
-			z.object({
-				$: z.object({
-					url: z.string(),
-					type: z.string(),
-					width: z.string(),
-					height: z.string(),
-					duration: z.string().optional()
-				})
-			})
-		).optional(),
+		'media:thumbnail': z.object({
+			url: z.string(),
+			width: z.string(),
+			height: z.string()
+		}), // Direct object without $ wrapper
+		'media:content': z.object({
+			url: z.string(),
+			type: z.string(),
+			width: z.string(),
+			height: z.string(),
+			duration: z.string().optional()
+		}).optional(), // Direct object without $ wrapper
 		'media:community': z.object({
 			'media:statistics': z.object({
-				$: z.object({
-					views: z.string().optional(),
-					likes: z.string().optional()
-				})
+				views: z.string().optional(),
+				likes: z.string().optional()
 			}).optional()
 		}).optional()
 	}),
@@ -82,17 +72,12 @@ export function parseRss(xmlText: string, maxVideos: number = 100): NewYoutubeVi
 		title: entry.title,
 		published: entry.published,
 		updated: entry.updated,
-		author: entry.author || { name: '', uri: '' },
+		author: entry.author || { name: '', uri: '' }, // Fixed to match schema
 		'media:group': {
 			'media:title': entry['media:group']['media:title'],
 			'media:description': entry['media:group']['media:description'],
-			'media:thumbnail': Array.isArray(entry['media:group']['media:thumbnail']) 
-				? entry['media:group']['media:thumbnail'] 
-				: [entry['media:group']['media:thumbnail']],
-			'media:content': entry['media:group']['media:content'] ? 
-				(Array.isArray(entry['media:group']['media:content']) 
-					? entry['media:group']['media:content'] 
-					: [entry['media:group']['media:content']]) : undefined,
+			'media:thumbnail': entry['media:group']['media:thumbnail'], // Single object now
+			'media:content': entry['media:group']['media:content'], // Single object now
 			'media:community': entry['media:group']['media:community'] || {}
 		},
 		'yt:videoId': entry['yt:videoId'],
@@ -108,20 +93,15 @@ export function parseRss(xmlText: string, maxVideos: number = 100): NewYoutubeVi
 	const videos: NewYoutubeVideo[] = parsedData.feed.entry
 		.slice(0, maxVideos) // This will now get all available videos up to 100
 		.map((entry) => {
-			// Get the highest quality thumbnail available
-			const thumbnails = entry['media:group']['media:thumbnail'];
-			const bestThumbnail = thumbnails.reduce((best: any, current: any) => {
-				const bestWidth = parseInt(best.$.width);
-				const currentWidth = parseInt(current.$.width);
-				return currentWidth > bestWidth ? current : best;
-			}, thumbnails[0]);
+			// Get the thumbnail (now a single object)
+			const thumbnail = entry['media:group']['media:thumbnail'];
 
 			// Extract additional metadata
 			const duration = entry['yt:duration'] || 
-				(entry['media:group']['media:content']?.[0]?.$?.duration);
+				(entry['media:group']['media:content']?.duration);
 			
-			const viewCount = entry['media:group']['media:community']?.['media:statistics']?.$?.views;
-			const likeCount = entry['media:group']['media:community']?.['media:statistics']?.$?.likes;
+			const viewCount = entry['media:group']['media:community']?.['media:statistics']?.views;
+			const likeCount = entry['media:group']['media:community']?.['media:statistics']?.likes;
 
 			// Enhanced description with metadata
 			let enhancedDescription = entry['media:group']['media:description'];
@@ -139,7 +119,7 @@ export function parseRss(xmlText: string, maxVideos: number = 100): NewYoutubeVi
 				id: extractVideoId(entry.id),
 				title: entry['media:group']['media:title'],
 				description: enhancedDescription,
-				thumbnail: bestThumbnail?.$?.url || '',
+				thumbnail: thumbnail?.url || '',
 				publishedAt: new Date(entry.published)
 			};
 		});
