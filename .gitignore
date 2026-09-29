@@ -6,8 +6,10 @@ yarn-error.log*
 
 # Build outputs
 .svelte-kit/
+.next/
 build/
 dist/
+out/
 
 # Environment variables
 .env
