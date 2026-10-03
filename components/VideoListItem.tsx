@@ -9,11 +9,12 @@ import {
 } from '@/lib/youtube/thumbnailUrl';
 import {
 	formatGameCountLabel,
-	formatVideoStatsSegments,
 	parseVideoDescriptionExtras
 } from '@/lib/youtube/videoDescriptionExtras';
+import { ExternalLink } from 'lucide-react';
 import { ShutterIcon } from '@/components/brand/ShutterIcon';
 import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
+import { getYoutubeWatchUrl } from '@/lib/youtube/watchUrl';
 
 export type VideoWithGameCount = YoutubeVideoClient & { gameCount: number };
 
@@ -35,7 +36,6 @@ export function VideoListItem({
 
 	const extras = parseVideoDescriptionExtras(video.description);
 	const publishedLabel = new Date(video.publishedAt).toLocaleDateString();
-	const metaTail = formatVideoStatsSegments(extras);
 
 	function onThumbError() {
 		setThumbIndex((i) => (i < fallbackUrls.length - 1 ? i + 1 : i));
@@ -55,19 +55,38 @@ export function VideoListItem({
 				/>
 			</ViewfinderFrame>
 			<div className="min-w-0 flex-1">
-				<h3 className="line-clamp-1 text-base font-semibold text-gray-900 dark:text-gray-50">
-					{video.title}
-				</h3>
+				<div className="inline-flex max-w-full items-center gap-1.5">
+					<h3 className="min-w-0 truncate text-base font-semibold text-gray-900 dark:text-gray-50">
+						{video.title}
+					</h3>
+					<a
+						href={getYoutubeWatchUrl(video.id)}
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label={`Watch ${video.title} on YouTube`}
+						className="shrink-0 text-gray-500 transition hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
+					>
+						<ExternalLink className="h-4 w-4" aria-hidden />
+					</a>
+				</div>
 				<p className="mt-0.5 line-clamp-1 text-sm text-gray-500 dark:text-gray-400">
-					{publishedLabel}
-					{' · '}
+					<span className="max-sm:hidden">
+						{publishedLabel}
+						{' · '}
+					</span>
 					<Link
 						href={`/videos/${encodeURIComponent(video.id)}/games`}
 						className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
 					>
 						{formatGameCountLabel(video.gameCount)}
 					</Link>
-					{metaTail.length > 0 ? ` · ${metaTail.join(' · ')}` : ''}
+					{extras.duration ? ` · ${extras.duration}` : ''}
+					{extras.views ? (
+						<span className="max-sm:hidden">
+							{' · '}
+							{extras.views} views
+						</span>
+					) : null}
 				</p>
 			</div>
 			<button

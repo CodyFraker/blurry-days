@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { CategoryEnum, DrinkEnum } from '@/lib/db/enums';
 import type { YoutubeVideoClient } from '@/lib/youtube/videoClientTypes';
@@ -21,9 +21,12 @@ const isoValues: (number | 'PROGRAM')[] = [100, 200, 400, 800, 1600, 'PROGRAM'];
 
 type Rule = RuleView;
 
-export default function GameSummaryClient() {
+type GameSummaryClientProps = {
+	videoId?: string;
+};
+
+export default function GameSummaryClient({ videoId }: GameSummaryClientProps) {
 	const router = useRouter();
-	const searchParams = useSearchParams();
 	const [videos, setVideos] = useState<YoutubeVideoClient[]>([]);
 	const [gameSettings, setGameSettings] = useState<{
 		videoId: string;
@@ -58,7 +61,6 @@ export default function GameSummaryClient() {
 				if (!response.ok) throw new Error('Failed to fetch videos');
 				const list = await response.json();
 				setVideos(list);
-				const videoId = searchParams.get('videoId');
 				if (!videoId) {
 					router.replace('/');
 					return;
@@ -81,7 +83,7 @@ export default function GameSummaryClient() {
 				setIsLoading(false);
 			}
 		})();
-	}, [router, searchParams]);
+	}, [router, videoId]);
 
 	async function generateRules() {
 		if (!gameSettings) return;
