@@ -1,4 +1,4 @@
-import { DrinkEnum } from '@/lib/db/schema';
+import { DrinkEnum } from '@/lib/db/enums';
 import { getDrinkName } from '@/lib/rules/drinks';
 
 const levels = [DrinkEnum.Sip, DrinkEnum.Gulp, DrinkEnum.Pull, DrinkEnum.Shot];

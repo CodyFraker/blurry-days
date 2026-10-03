@@ -9,6 +9,7 @@ export type RuleView = {
 	order?: number;
 	isCustom?: boolean;
 	ruleTemplateId?: string | null;
+	description?: string | null;
 };
 
 function categoryLabel(category: string) {
@@ -61,6 +62,15 @@ export function RuleCard({
 				</span>
 			</div>
 			<p className="mb-4 text-gray-900 dark:text-gray-100">{rule.text}</p>
+			{rule.description ? (
+				<p
+					data-testid="rule-guidance"
+					className="mb-4 text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap"
+				>
+					<span className="font-medium text-gray-700 dark:text-gray-300">Guidance: </span>
+					{rule.description}
+				</p>
+			) : null}
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
 					{showCategoryIcon ? <CategoryIcon category={rule.category} /> : null}

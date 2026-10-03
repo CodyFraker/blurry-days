@@ -7,7 +7,7 @@ import { AppShell } from '@/components/AppShell';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-	title: 'blurrydays drinking game generator',
+	title: 'blurrydays',
 	description: 'Generate custom drinking games from grainydays film photography videos',
 	openGraph: {
 		title: 'grainydays Drinking Game Generator',

@@ -9,7 +9,8 @@ export default defineConfig([
 	{
 		rules: {
 			'react-hooks/set-state-in-effect': 'warn',
-			'react-hooks/purity': 'warn'
+			'react-hooks/purity': 'warn',
+			'@next/next/no-img-element': 'off'
 		}
 	}
 ]);

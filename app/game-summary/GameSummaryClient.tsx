@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
-import type { YoutubeVideo } from '@/lib/db/schema';
-import { CategoryEnum, DrinkEnum } from '@/lib/db/schema';
+import { CategoryEnum, DrinkEnum } from '@/lib/db/enums';
+import type { YoutubeVideoClient } from '@/lib/youtube/videoClientTypes';
 import { getDrinkName } from '@/lib/rules/drinks';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorPanel } from '@/components/ErrorPanel';
@@ -24,7 +24,7 @@ type Rule = RuleView;
 export default function GameSummaryClient() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const [videos, setVideos] = useState<YoutubeVideo[]>([]);
+	const [videos, setVideos] = useState<YoutubeVideoClient[]>([]);
 	const [gameSettings, setGameSettings] = useState<{
 		videoId: string;
 		videoTitle: string;
@@ -63,7 +63,7 @@ export default function GameSummaryClient() {
 					router.replace('/');
 					return;
 				}
-				const video = list.find((v: YoutubeVideo) => v.id === videoId);
+				const video = list.find((v: YoutubeVideoClient) => v.id === videoId);
 				if (!video) {
 					setError('Video not found');
 					return;
@@ -102,7 +102,7 @@ export default function GameSummaryClient() {
 			setRules(
 				data.rules.map((rule: Rule, index: number) => ({
 					...rule,
-					id: `temp-${Date.now()}-${index}`,
+					id: `temp-${crypto.randomUUID()}-${index}`,
 					order: index + 1,
 					isCustom: false
 				}))
@@ -133,7 +133,7 @@ export default function GameSummaryClient() {
 			setRules(
 				data.rules.map((rule: Rule, index: number) => ({
 					...rule,
-					id: `temp-${Date.now()}-${index}`,
+					id: `temp-${crypto.randomUUID()}-${index}`,
 					order: index + 1,
 					isCustom: false
 				}))
@@ -164,7 +164,7 @@ export default function GameSummaryClient() {
 			const data = await response.json();
 			const newRule = {
 				...data.rules[0],
-				id: `temp-${Date.now()}-${ruleIndex}`,
+				id: `temp-${crypto.randomUUID()}-${ruleIndex}`,
 				order: ruleIndex + 1,
 				isCustom: false
 			};
@@ -184,7 +184,7 @@ export default function GameSummaryClient() {
 		e.preventDefault();
 		if (!customRuleText.trim()) return;
 		const newRule: Rule = {
-			id: `custom-${Date.now()}`,
+			id: `custom-${crypto.randomUUID()}`,
 			text: customRuleText.trim(),
 			category: customRuleCategory,
 			baseDrink: customRuleDrink,
@@ -236,7 +236,7 @@ export default function GameSummaryClient() {
 		}
 	}
 
-	function selectVideo(video: YoutubeVideo) {
+	function selectVideo(video: YoutubeVideoClient) {
 		setGameSettings((g) =>
 			g
 				? {

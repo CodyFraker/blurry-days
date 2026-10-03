@@ -1,4 +1,4 @@
-import { DrinkEnum } from '@/lib/db/schema';
+import { DrinkEnum } from '@/lib/db/enums';
 
 export function calculateEffectiveDrink(baseDrink: number, intoxicationLevel: number): number {
 	const effectiveDrink = baseDrink + intoxicationLevel;

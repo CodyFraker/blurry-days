@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { games, youtubeVideos, type YoutubeVideo } from '@/lib/db/schema';
 import { fetchRss, parseRss } from '@/lib/youtube/rssParser';
-import { and, asc, desc, eq, gte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, or, sql } from 'drizzle-orm';
 
 const DEFAULT_CACHE_MINUTES = 60;
 

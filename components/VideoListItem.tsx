@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import type { YoutubeVideo } from '@/lib/db/schema';
+import type { YoutubeVideoClient } from '@/lib/youtube/videoClientTypes';
 import {
 	getYoutubeThumbnailFallbackUrls,
 	getYoutubeThumbnailUrl
@@ -15,7 +15,7 @@ import {
 import { ShutterIcon } from '@/components/brand/ShutterIcon';
 import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
 
-export type VideoWithGameCount = YoutubeVideo & { gameCount: number };
+export type VideoWithGameCount = YoutubeVideoClient & { gameCount: number };
 
 export function VideoListItem({
 	video,

@@ -1,61 +1,134 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+
+import { cleanup, render, screen } from '@testing-library/react';
+
 import Link from 'next/link';
+
 import { AppShell } from './AppShell';
 
+
+
 const adminNavLinkState = vi.hoisted(() => ({
+
 	showLink: false
+
 }));
+
+
 
 vi.mock('@/components/AuthHeader', () => ({
-	AuthHeader: () => <button type="button">Sign in with Discord</button>
+
+	AuthHeader: ({ children }: { children?: React.ReactNode }) => (
+
+		<div data-testid="auth-header">
+
+			<button type="button">Sign in with Discord</button>
+
+			{children}
+
+		</div>
+
+	)
+
 }));
+
+
 
 vi.mock('@/components/AdminNavLink', () => ({
+
 	AdminNavLink: () =>
+
 		adminNavLinkState.showLink ? <Link href="/admin">Admin</Link> : null
+
 }));
 
+
+
 describe('AppShell', () => {
-	it('renders navigation with Rules and a single My games link', () => {
-		adminNavLinkState.showLink = false;
-		render(
-			<AppShell>
-				<p>Content</p>
-			</AppShell>
-		);
 
-		const rulesLink = screen.getByRole('link', { name: 'Rules' });
-		const myGamesLinks = screen.getAllByRole('link', { name: 'My games' });
+	afterEach(() => {
 
-		expect(rulesLink).toHaveAttribute('href', '/rules');
-		expect(myGamesLinks).toHaveLength(1);
-		expect(myGamesLinks[0]).toHaveAttribute('href', '/my-games');
+		cleanup();
+
 	});
 
-	it('renders Admin link when AdminNavLink is shown', () => {
+
+
+	it('renders rules nav link without my games in main nav', () => {
+
+		adminNavLinkState.showLink = false;
+
+		render(
+
+			<AppShell>
+
+				<p>Content</p>
+
+			</AppShell>
+
+		);
+
+
+
+		expect(document.querySelector('nav a[href="/rules"]')).toBeTruthy();
+
+		expect(document.querySelector('a[href="/my-games"]')).toBeNull();
+
+	});
+
+
+
+	it('renders Admin link inside AuthHeader when AdminNavLink is shown', () => {
+
 		adminNavLinkState.showLink = true;
+
 		render(
+
 			<AppShell>
+
 				<p>Content</p>
+
 			</AppShell>
+
 		);
 
-		const adminLink = screen.getByRole('link', { name: 'Admin' });
-		expect(adminLink).toHaveAttribute('href', '/admin');
+
+
+		const adminLink = document.querySelector('[data-testid="auth-header"] a[href="/admin"]');
+
+		expect(adminLink).toBeTruthy();
+
+		expect(screen.getByTestId('auth-header')).toContainElement(adminLink);
+
 		adminNavLinkState.showLink = false;
+
 	});
 
-	it('uses responsive header layout classes', () => {
+
+
+	it('keeps logo and nav on one row at narrow widths', () => {
+
 		adminNavLinkState.showLink = false;
+
 		const { container } = render(
+
 			<AppShell>
+
 				<p>Content</p>
+
 			</AppShell>
+
 		);
+
+
 
 		const headerInner = container.querySelector('header > div');
-		expect(headerInner?.className).toMatch(/max-sm:flex-col/);
-		expect(headerInner?.className).toMatch(/flex-wrap/);
+
+		expect(headerInner?.className).toMatch(/flex-nowrap/);
+
+		expect(headerInner?.className).not.toMatch(/max-sm:flex-col/);
+
 	});
+
 });
+

@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-	output: 'standalone'
+	output: 'standalone',
+	serverExternalPackages: ['drizzle-orm', 'drizzle-zod', 'postgres', '@auth/drizzle-adapter']
 };
 
 export default nextConfig;

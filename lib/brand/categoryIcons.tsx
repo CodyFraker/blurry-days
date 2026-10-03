@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CategoryEnum } from '@/lib/db/schema';
+import { CategoryEnum } from '@/lib/db/enums';
 
 function IconSvg({ children }: { children: React.ReactNode }) {
 	return (

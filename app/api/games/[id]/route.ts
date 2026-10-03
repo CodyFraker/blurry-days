@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { games, rules } from '@/lib/db/schema';
+import { games } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { getPlayableGameRules } from '@/lib/games/getPlayableGameRules';
 import { playableGameFilter } from '@/lib/games/gameVisibility';
 
 /**
  * GET /api/games/[id]
- * Returns a playable game and its rules by id.
+ * Returns a playable game and its rules by id. Each rule includes live template `description` when linked to a catalog template.
  */
 export async function GET(
 	_request: Request,
@@ -31,11 +32,7 @@ export async function GET(
 
 		const game = gameResult[0];
 
-		const rulesResult = await db
-			.select()
-			.from(rules)
-			.where(eq(rules.gameId, id))
-			.orderBy(rules.order);
+		const rulesResult = await getPlayableGameRules(id);
 
 		return NextResponse.json({
 			game: {
@@ -47,14 +44,7 @@ export async function GET(
 				intoxicationLevel: game.intoxicationLevel,
 				expiresAt: game.expiresAt
 			},
-			rules: rulesResult.map((rule) => ({
-				id: rule.id,
-				text: rule.text,
-				category: rule.category,
-				baseDrink: rule.baseDrink,
-				order: rule.order,
-				isCustom: rule.isCustom
-			}))
+			rules: rulesResult
 		});
 	} catch (error) {
 		console.error('Error fetching game:', error);

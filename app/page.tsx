@@ -42,18 +42,13 @@ export default function HomePage() {
 				if (!response.ok) throw new Error('Failed to fetch videos');
 				const allVideos = (await response.json()) as VideoWithGameCount[];
 				setVideos(allVideos);
+				setDisplayedVideos(allVideos.slice(0, videosPerPage));
+				setHasMoreVideos(allVideos.length > videosPerPage);
 			} catch {
 				setError('Failed to load videos');
 			}
 		})();
 	}, []);
-
-	useEffect(() => {
-		if (videos.length > 0 && displayedVideos.length === 0) {
-			setDisplayedVideos(videos.slice(0, videosPerPage));
-			setHasMoreVideos(videos.length > videosPerPage);
-		}
-	}, [videos, displayedVideos.length]);
 
 	useEffect(() => {
 		const el = loadMoreRef.current;

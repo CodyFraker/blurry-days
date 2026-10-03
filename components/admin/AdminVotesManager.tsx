@@ -27,7 +27,9 @@ export function AdminVotesManager() {
 	}, []);
 
 	useEffect(() => {
-		load();
+		queueMicrotask(() => {
+			void load();
+		});
 	}, [load]);
 
 	async function clearVotes(templateId: string) {

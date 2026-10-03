@@ -13,12 +13,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 		<div className="relative flex min-h-screen flex-col bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
 			<FilmGrainOverlay />
 			<header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
-				<div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:flex-nowrap sm:px-6 max-sm:flex-col max-sm:items-stretch">
+				<div className="mx-auto flex max-w-6xl flex-nowrap items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
 					<Link
 						href="/"
-						className="rounded text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 sm:text-left"
+						className="min-w-0 shrink rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
 					>
-						<h1 className="flex items-center justify-center gap-2 text-2xl font-bold tracking-tight hover:text-indigo-700 sm:justify-start dark:hover:text-indigo-300">
+						<h1 className="flex min-w-0 items-center gap-2 truncate text-xl font-bold tracking-tight hover:text-indigo-700 sm:text-2xl dark:hover:text-indigo-300">
 							<LogoMark className="h-7 w-7 shrink-0 text-indigo-600 dark:text-indigo-400" />
 							blurrydays
 						</h1>
@@ -27,17 +27,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 						</p>
 					</Link>
 					<nav
-						className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 max-sm:w-full"
+						className="flex shrink-0 items-center justify-end gap-2 sm:gap-4"
 						aria-label="Main"
 					>
 						<Link href="/rules" className={navLinkClass}>
 							Rules
 						</Link>
-						<Link href="/my-games" className={navLinkClass}>
-							My games
-						</Link>
-						<AdminNavLink />
-						<AuthHeader />
+						<AuthHeader>
+							<AdminNavLink variant="menu" />
+						</AuthHeader>
 					</nav>
 				</div>
 			</header>

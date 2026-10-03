@@ -36,7 +36,9 @@ export function AdminGamesManager() {
 	}, [q]);
 
 	useEffect(() => {
-		load();
+		queueMicrotask(() => {
+			void load();
+		});
 	}, [load]);
 
 	async function loadDetail(id: string) {

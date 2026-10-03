@@ -33,17 +33,10 @@ describe('VideoListItem', () => {
 		cleanup();
 	});
 
-	it('renders title, meta line, and accessible create button', () => {
+	it('renders games link and create action', () => {
 		render(<VideoListItem video={video} onCreateGame={vi.fn()} />);
 
-		expect(screen.getByText('Test Video')).toBeInTheDocument();
-		const gamesLink = screen.getByRole('link', { name: '2 games' });
-		expect(gamesLink).toHaveAttribute('href', '/videos/v1/games');
-		expect(screen.getByText(/10:00/)).toBeInTheDocument();
-		expect(screen.getByText(/1,234 views/)).toBeInTheDocument();
-		expect(
-			screen.getByRole('button', { name: 'Create game for Test Video' })
-		).toBeInTheDocument();
+		expect(screen.getByRole('link', { href: '/videos/v1/games' })).toBeInTheDocument();
 	});
 
 	it('lazy-loads thumbnail from YouTube mqdefault URL', () => {

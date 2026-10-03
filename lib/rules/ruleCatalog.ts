@@ -52,6 +52,7 @@ export type RuleTemplateListItem = {
 	weight: number;
 	baseDrink: number;
 	usageCount: number;
+	description: string | null;
 	createdAt: Date;
 	thumbsUp: number;
 	thumbsDown: number;
@@ -76,6 +77,7 @@ export async function listRuleTemplates(query: ListRulesQuery): Promise<ListRule
 			weight: ruleTemplates.weight,
 			baseDrink: ruleTemplates.baseDrink,
 			usageCount: ruleTemplates.usageCount,
+			description: ruleTemplates.description,
 			createdAt: ruleTemplates.createdAt,
 			thumbsUp: sql<number>`(
 				select count(*)::int from ${ruleVotes}
@@ -108,6 +110,7 @@ export async function listRuleTemplates(query: ListRulesQuery): Promise<ListRule
 			weight: row.weight,
 			baseDrink: row.baseDrink,
 			usageCount: row.usageCount,
+			description: row.description,
 			createdAt: row.createdAt,
 			thumbsUp: row.thumbsUp,
 			thumbsDown: row.thumbsDown

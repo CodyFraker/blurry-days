@@ -78,7 +78,8 @@ export async function POST(request: Request) {
 			category: parsed.data.category,
 			weight: parsed.data.weight,
 			baseDrink: parsed.data.baseDrink,
-			enabled: parsed.data.enabled
+			enabled: parsed.data.enabled,
+			description: parsed.data.description ?? null
 		})
 		.returning();
 

@@ -13,22 +13,9 @@ import {
 import type { AdapterAccount } from 'next-auth/adapters';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { CategoryEnum } from '@/lib/db/enums';
 
-export const DrinkEnum = {
-	Sip: 0,
-	Gulp: 1,
-	Pull: 2,
-	Shot: 3
-} as const;
-
-export const CategoryEnum = {
-	Camera: 'camera',
-	Film: 'film',
-	Technique: 'technique',
-	Location: 'location',
-	Equipment: 'equipment',
-	General: 'general'
-} as const;
+export { CategoryEnum, DrinkEnum } from '@/lib/db/enums';
 
 export const users = pgTable('user', {
 	id: text('id')
@@ -119,6 +106,7 @@ export const ruleTemplates = pgTable('rule_templates', {
 	baseDrink: integer('base_drink').notNull(),
 	usageCount: integer('usage_count').default(0).notNull(),
 	enabled: boolean('enabled').default(true).notNull(),
+	description: text('description'),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 

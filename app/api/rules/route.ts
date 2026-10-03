@@ -20,6 +20,7 @@ export async function GET(request: Request) {
 				weight: rule.weight,
 				baseDrink: rule.baseDrink,
 				usageCount: rule.usageCount,
+				description: rule.description,
 				createdAt: rule.createdAt.toISOString(),
 				thumbsUp: rule.thumbsUp,
 				thumbsDown: rule.thumbsDown

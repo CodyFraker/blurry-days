@@ -21,14 +21,21 @@ type SavedGame = {
 export default function MyGamesPage() {
 	const { status } = useSession();
 	const [games, setGames] = useState<SavedGame[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [gamesFetchComplete, setGamesFetchComplete] = useState(false);
 	const [error, setError] = useState('');
+
+	const loading = status === 'loading' || (status === 'authenticated' && !gamesFetchComplete);
 
 	useEffect(() => {
 		if (status !== 'authenticated') {
-			setLoading(false);
 			return;
 		}
+		let cancelled = false;
+		queueMicrotask(() => {
+			if (!cancelled) {
+				setGamesFetchComplete(false);
+			}
+		});
 		(async () => {
 			try {
 				const res = await fetch('/api/me/games');
@@ -42,9 +49,12 @@ export default function MyGamesPage() {
 			} catch {
 				setError('Failed to load your games');
 			} finally {
-				setLoading(false);
+				setGamesFetchComplete(true);
 			}
 		})();
+		return () => {
+			cancelled = true;
+		};
 	}, [status]);
 
 	if (status === 'loading' || loading) {

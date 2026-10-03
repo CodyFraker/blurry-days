@@ -110,6 +110,7 @@ export async function generateRulesForVideo({
 }
 
 function extractHostName(_videoTitle: string): string | null {
+	void _videoTitle;
 	return 'the host';
 }
 

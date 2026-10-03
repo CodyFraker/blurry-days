@@ -49,7 +49,9 @@ export function AdminSystemManager() {
 	}, []);
 
 	useEffect(() => {
-		load();
+		queueMicrotask(() => {
+			void load();
+		});
 	}, [load]);
 
 	return (

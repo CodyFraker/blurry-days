@@ -31,7 +31,9 @@ export function AdminVideosManager() {
 	}, []);
 
 	useEffect(() => {
-		load();
+		queueMicrotask(() => {
+			void load();
+		});
 	}, [load]);
 
 	async function forceSync() {

@@ -119,4 +119,36 @@ describe.skipIf(!hasTestDb)('rule catalog', () => {
 		expect(result.rules.some((r) => r.id === enabled.id)).toBe(true);
 		expect(result.rules.some((r) => r.text === 'Disabled rule')).toBe(false);
 	});
+
+	it('returns description when set on template', async () => {
+		const [withDescription] = await db
+			.insert(ruleTemplates)
+			.values({
+				text: 'Rule with guidance',
+				category: CategoryEnum.General,
+				weight: 1,
+				baseDrink: DrinkEnum.Sip,
+				description: 'Sip only once per scene.'
+			})
+			.returning();
+		await db.insert(ruleTemplates).values({
+			text: 'Rule without guidance',
+			category: CategoryEnum.General,
+			weight: 1,
+			baseDrink: DrinkEnum.Sip
+		});
+
+		const result = await listRuleTemplates({
+			page: 1,
+			pageSize: 25,
+			offset: 0,
+			limit: 25
+		});
+
+		const described = result.rules.find((r) => r.id === withDescription.id);
+		expect(described?.description).toBe('Sip only once per scene.');
+
+		const plain = result.rules.find((r) => r.text === 'Rule without guidance');
+		expect(plain?.description).toBeNull();
+	});
 });

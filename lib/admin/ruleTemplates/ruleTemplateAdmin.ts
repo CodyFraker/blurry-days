@@ -11,6 +11,7 @@ export type AdminRuleTemplateListItem = {
 	baseDrink: number;
 	usageCount: number;
 	enabled: boolean;
+	description: string | null;
 	createdAt: Date;
 	thumbsUp: number;
 	thumbsDown: number;
@@ -34,6 +35,7 @@ export async function listAdminRuleTemplates(
 			baseDrink: ruleTemplates.baseDrink,
 			usageCount: ruleTemplates.usageCount,
 			enabled: ruleTemplates.enabled,
+			description: ruleTemplates.description,
 			createdAt: ruleTemplates.createdAt,
 			thumbsUp: sql<number>`(
 				select count(*)::int from ${ruleVotes}
@@ -79,6 +81,7 @@ export async function getAdminRuleTemplateById(id: string) {
 			baseDrink: ruleTemplates.baseDrink,
 			usageCount: ruleTemplates.usageCount,
 			enabled: ruleTemplates.enabled,
+			description: ruleTemplates.description,
 			createdAt: ruleTemplates.createdAt,
 			thumbsUp: sql<number>`(
 				select count(*)::int from ${ruleVotes}

@@ -29,6 +29,13 @@
       "when": 1750720137569,
       "tag": "0004_admin_acp",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1750720137570,
+      "tag": "0005_rule_template_description",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { buttonVariants } from '@/components/ui/button';
 import { RulesPageHeader } from '@/components/RulesPageHeader';
+import { cn } from '@/lib/utils';
 import { RulesCatalogCards } from '@/components/RulesCatalogCards';
 import { RulesCatalogTable } from '@/components/RulesCatalogTable';
 import { listRuleTemplates, parseListRulesQuery } from '@/lib/rules/ruleCatalog';
@@ -37,18 +39,18 @@ export default async function RulesPage({
 					{pagination.page > 1 && (
 						<Link
 							href={`/rules?page=${pagination.page - 1}`}
-							className="min-h-11 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+							className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'min-h-11')}
 						>
 							Previous
 						</Link>
 					)}
-					<span className="px-2 text-sm text-gray-600 dark:text-gray-400">
+					<span className="px-2 text-sm text-muted-foreground">
 						Page {pagination.page} of {pagination.totalPages}
 					</span>
 					{pagination.page < pagination.totalPages && (
 						<Link
 							href={`/rules?page=${pagination.page + 1}`}
-							className="min-h-11 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+							className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'min-h-11')}
 						>
 							Next
 						</Link>
