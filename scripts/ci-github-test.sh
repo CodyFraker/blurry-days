@@ -49,16 +49,10 @@ if ! postgres_ready; then
 	exit 1
 fi
 
-psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d grainydays -tc "SELECT 1 FROM pg_database WHERE datname = 'grainydays_test'" | grep -q 1 || \
-	psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d grainydays -c "CREATE DATABASE grainydays_test"
-
 echo "==> npm ci"
 npm ci
 
-echo "==> migrate main database"
-npm run db:migrate
-
-echo "==> migrate test database"
+echo "==> prepare integration test database"
 DATABASE_URL="$DATABASE_URL_TEST" npm run db:migrate
 
 echo "==> unit tests"

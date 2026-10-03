@@ -43,22 +43,9 @@ jobs:
           node-version: "20"
           cache: npm
 
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Create test database
-        env:
-          PGPASSWORD: grainydays_dev
-        run: |
-          psql -h localhost -U grainydays -d grainydays -tc "SELECT 1 FROM pg_database WHERE datname = 'grainydays_test'" | grep -q 1 || \
-          psql -h localhost -U grainydays -d grainydays -c "CREATE DATABASE grainydays_test"
-
       - run: npm ci
 
-      - name: Migrate main database
-        run: npm run db:migrate
-
-      - name: Migrate test database
+      - name: Prepare integration test database
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_TEST }}
         run: npm run db:migrate

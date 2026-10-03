@@ -1,8 +1,10 @@
 import { ensureDatabase } from '../lib/db/ensureDatabase';
 
-try {
+async function main(): Promise<void> {
 	await ensureDatabase();
-} catch (error) {
+}
+
+main().catch((error) => {
 	console.error(error);
 	process.exit(1);
-}
+});
