@@ -34,6 +34,7 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/public ./public
+COPY --from=builder --chown=appuser:appgroup /app/drizzle ./drizzle
 COPY --from=builder --chown=appuser:appgroup /app/.next/standalone ./
 COPY --from=builder --chown=appuser:appgroup /app/.next/static ./.next/static
 
