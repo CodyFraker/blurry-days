@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { EmptyStateIllustration } from '@/components/brand/EmptyStateIllustration';
+import { HomeHero } from '@/components/HomeHero';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { VideoListItem, type VideoWithGameCount } from '@/components/VideoListItem';
 
@@ -87,15 +89,15 @@ export default function HomePage() {
 
 	return (
 		<div>
-			<div className="mb-8 text-center sm:mb-12">
-				<h2 className="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">Choose Your Video</h2>
-				<p className="mx-auto mt-2 max-w-xl text-gray-600 dark:text-gray-400">
-					Select a film photography video to generate a custom drinking game
-				</p>
-				<p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
-					{videos.length} {videos.length === 1 ? 'video' : 'videos'}
-				</p>
-			</div>
+			<HomeHero
+				title="Choose Your Video"
+				description="Select a film photography video to generate a custom drinking game"
+				meta={
+					<p className="text-sm text-gray-500 dark:text-gray-500">
+						{videos.length} {videos.length === 1 ? 'video' : 'videos'}
+					</p>
+				}
+			/>
 			<div className="mx-auto max-w-3xl space-y-3">
 				{displayedVideos.map((video) => (
 					<VideoListItem
@@ -112,9 +114,10 @@ export default function HomePage() {
 				</div>
 			)}
 			{!hasMoreVideos && displayedVideos.length > 0 && (
-				<p className="py-8 text-center text-gray-500 dark:text-gray-400">
-					You&apos;ve reached the end! All {videos.length} videos loaded.
-				</p>
+				<div className="flex flex-col items-center py-8 text-center text-gray-500 dark:text-gray-400">
+					<EmptyStateIllustration variant="endOfRoll" className="mb-4 h-20 w-20" />
+					<p>You&apos;ve reached the end! All {videos.length} videos loaded.</p>
+				</div>
 			)}
 		</div>
 	);

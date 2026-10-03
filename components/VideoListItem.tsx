@@ -12,32 +12,10 @@ import {
 	formatVideoStatsSegments,
 	parseVideoDescriptionExtras
 } from '@/lib/youtube/videoDescriptionExtras';
+import { ShutterIcon } from '@/components/brand/ShutterIcon';
+import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
 
 export type VideoWithGameCount = YoutubeVideo & { gameCount: number };
-
-function ViewfinderFrame({ children }: { children: React.ReactNode }) {
-	return (
-		<div className="relative h-[4.5rem] w-[8rem] shrink-0 overflow-hidden rounded-md bg-black">
-			{children}
-			<span
-				className="pointer-events-none absolute left-1 top-1 h-2.5 w-2.5 border-l-2 border-t-2 border-white/80"
-				aria-hidden
-			/>
-			<span
-				className="pointer-events-none absolute right-1 top-1 h-2.5 w-2.5 border-r-2 border-t-2 border-white/80"
-				aria-hidden
-			/>
-			<span
-				className="pointer-events-none absolute bottom-1 left-1 h-2.5 w-2.5 border-b-2 border-l-2 border-white/80"
-				aria-hidden
-			/>
-			<span
-				className="pointer-events-none absolute bottom-1 right-1 h-2.5 w-2.5 border-b-2 border-r-2 border-white/80"
-				aria-hidden
-			/>
-		</div>
-	);
-}
 
 export function VideoListItem({
 	video,
@@ -99,7 +77,7 @@ export function VideoListItem({
 				aria-label={`Create game for ${video.title}`}
 				className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100 text-lg transition hover:border-emerald-500 hover:bg-emerald-600 hover:text-white disabled:opacity-60 dark:border-gray-500 dark:bg-gray-700 dark:hover:border-emerald-500 dark:hover:bg-emerald-600"
 			>
-				<span aria-hidden>🎲</span>
+				<ShutterIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
 			</button>
 		</div>
 	);

@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
+import { EmptyStateIllustration } from '@/components/brand/EmptyStateIllustration';
+import { filmEdgeCardClassName } from '@/components/brand/FilmEdgeCard';
+import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 type SavedGame = {
@@ -51,6 +54,7 @@ export default function MyGamesPage() {
 	if (status === 'unauthenticated') {
 		return (
 			<div className="mx-auto max-w-md py-16 text-center">
+				<EmptyStateIllustration variant="signIn" className="mb-6 h-20 w-20" />
 				<h2 className="text-2xl font-bold">My Games</h2>
 				<p className="mt-2 text-gray-600 dark:text-gray-400">
 					Sign in with Discord to save and view your drinking games.
@@ -74,28 +78,35 @@ export default function MyGamesPage() {
 		<div>
 			<h2 className="mb-8 text-center text-2xl font-bold sm:text-3xl">My Games</h2>
 			{games.length === 0 ? (
-				<p className="text-center text-gray-600 dark:text-gray-400">
-					No saved games yet.{' '}
-					<Link href="/" className="text-blue-600 hover:underline dark:text-blue-400">
-						Create one
-					</Link>
-					.
-				</p>
+				<div className="flex flex-col items-center text-center text-gray-600 dark:text-gray-400">
+					<EmptyStateIllustration variant="noGames" className="mb-4 h-20 w-20" />
+					<p>
+						No saved games yet.{' '}
+						<Link href="/" className="text-blue-600 hover:underline dark:text-blue-400">
+							Create one
+						</Link>
+						.
+					</p>
+				</div>
 			) : (
 				<ul className="grid gap-4 sm:grid-cols-2">
 					{games.map((game) => (
 						<li key={game.id}>
 							<Link
 								href={`/game/${game.id}`}
-								className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md sm:flex-row dark:border-gray-700 dark:bg-gray-800"
+								className={filmEdgeCardClassName(
+									'flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md sm:flex-row dark:border-gray-700 dark:bg-gray-800'
+								)}
 							>
 								{game.videoThumbnail && (
-									<img
-										src={game.videoThumbnail}
-										alt=""
-										loading="lazy"
-										className="h-20 w-full shrink-0 rounded-lg object-cover sm:w-28"
-									/>
+									<ViewfinderFrame size="sm">
+										<img
+											src={game.videoThumbnail}
+											alt=""
+											loading="lazy"
+											className="h-full w-full scale-[1.05] object-cover"
+										/>
+									</ViewfinderFrame>
 								)}
 								<div className="min-w-0">
 									<h3 className="font-semibold text-gray-900 dark:text-white">{game.title}</h3>

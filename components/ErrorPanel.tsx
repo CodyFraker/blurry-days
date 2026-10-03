@@ -11,7 +11,7 @@ export function ErrorPanel({
 }) {
 	return (
 		<div className="mx-auto max-w-lg py-16 text-center">
-			<div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-left text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+			<div className="mb-6 rounded-sm border-2 border-dashed border-red-300 bg-red-50 p-4 text-left text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
 				<h2 className="text-lg font-semibold">{title}</h2>
 				<p className="mt-1 text-sm">{message}</p>
 			</div>

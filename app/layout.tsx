@@ -8,7 +8,12 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
 	title: 'Grainydays Drinking Game Generator',
-	description: 'Generate custom drinking games from Grainydays film photography videos'
+	description: 'Generate custom drinking games from Grainydays film photography videos',
+	openGraph: {
+		title: 'Grainydays Drinking Game Generator',
+		description: 'Generate custom drinking games from Grainydays film photography videos',
+		images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Grainydays Drinking Game Generator' }]
+	}
 };
 
 export const viewport: Viewport = {

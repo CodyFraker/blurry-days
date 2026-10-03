@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { RuleCard, type RuleView } from '@/components/RuleCard';
+import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
 import { getYoutubeWatchUrl } from '@/lib/youtube/watchUrl';
 
 type Game = {
@@ -69,14 +70,20 @@ export default function GamePage() {
 
 	return (
 		<div className="space-y-6 sm:space-y-10">
-			<div className="grid gap-8 lg:grid-cols-[1fr_auto]">
+			<div className="relative grid gap-8 lg:grid-cols-[1fr_auto]">
+				<div
+					className="pointer-events-none absolute -right-8 top-0 hidden h-48 w-48 rounded-full bg-gradient-to-bl from-orange-500/20 via-transparent to-transparent blur-3xl lg:block"
+					aria-hidden
+				/>
 				<div className="flex flex-col gap-4 sm:flex-row">
-					<img
-						src={game.videoThumbnail}
-						alt={game.videoTitle}
-						loading="lazy"
-						className="mx-auto h-auto w-full max-w-[300px] rounded-xl border border-gray-200 object-cover sm:mx-0 dark:border-gray-700"
-					/>
+					<ViewfinderFrame size="lg" className="sm:mx-0">
+						<img
+							src={game.videoThumbnail}
+							alt={game.videoTitle}
+							loading="lazy"
+							className="h-full w-full object-cover"
+						/>
+					</ViewfinderFrame>
 					<div>
 						<h1 className="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">{game.title}</h1>
 						<p className="mt-2 text-lg text-gray-600 dark:text-gray-400">{game.videoTitle}</p>
@@ -121,7 +128,12 @@ export default function GamePage() {
 			</div>
 			<div className="mx-auto max-w-2xl space-y-4">
 				{rules.map((rule, index) => (
-					<RuleCard key={rule.id} rule={rule} index={index} />
+					<RuleCard
+						key={rule.id}
+						rule={rule}
+						index={index}
+						indexBadgeVariant="frameNumber"
+					/>
 				))}
 			</div>
 			<p className="text-center">

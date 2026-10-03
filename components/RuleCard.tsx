@@ -1,3 +1,4 @@
+import { CategoryIcon } from '@/lib/brand/categoryIcons';
 import { getDrinkName } from '@/lib/rules/drinks';
 
 export type RuleView = {
@@ -17,11 +18,15 @@ function categoryLabel(category: string) {
 export function RuleCard({
 	rule,
 	index,
-	actions
+	actions,
+	indexBadgeVariant = 'default',
+	showCategoryIcon = true
 }: {
 	rule: RuleView;
 	index: number;
 	actions?: React.ReactNode;
+	indexBadgeVariant?: 'default' | 'frameNumber';
+	showCategoryIcon?: boolean;
 }) {
 	const drink = getDrinkName(rule.baseDrink);
 
@@ -41,7 +46,13 @@ export function RuleCard({
 				</span>
 			)}
 			<div className="mb-3 flex items-center justify-between gap-2">
-				<span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+				<span
+					className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white ${
+						indexBadgeVariant === 'frameNumber'
+							? 'border border-blue-400/60 bg-blue-700 font-mono tabular-nums'
+							: 'bg-blue-600'
+					}`}
+				>
 					{index + 1}
 				</span>
 				<span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
@@ -51,7 +62,8 @@ export function RuleCard({
 			</div>
 			<p className="mb-4 text-gray-900 dark:text-gray-100">{rule.text}</p>
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<span className="rounded-full bg-gray-100 px-3 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+				<span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+					{showCategoryIcon ? <CategoryIcon category={rule.category} /> : null}
 					{categoryLabel(rule.category)}
 				</span>
 				{actions}

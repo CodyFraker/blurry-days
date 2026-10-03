@@ -1,4 +1,5 @@
 import type { RuleTemplateListItem } from '@/lib/rules/ruleCatalog';
+import { CategoryIcon } from '@/lib/brand/categoryIcons';
 import { getDrinkName } from '@/lib/rules/drinks';
 
 function categoryLabel(category: string) {
@@ -17,7 +18,8 @@ export function RulesCatalogCards({ rules }: { rules: RuleTemplateListItem[] }) 
 					>
 						<p className="font-medium text-gray-900 dark:text-gray-50">{rule.text}</p>
 						<div className="mt-3 flex flex-wrap gap-2 text-sm text-gray-600 dark:text-gray-400">
-							<span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">
+							<span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">
+								<CategoryIcon category={rule.category} />
 								{categoryLabel(rule.category)}
 							</span>
 							<span>{drink.icon} {drink.name}</span>

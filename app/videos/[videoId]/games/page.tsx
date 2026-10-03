@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { EmptyStateIllustration } from '@/components/brand/EmptyStateIllustration';
+import { filmEdgeCardClassName } from '@/components/brand/FilmEdgeCard';
+import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
 import { getYoutubeThumbnailUrl } from '@/lib/youtube/thumbnailUrl';
 
 type VideoGamesPayload = {
@@ -75,11 +78,9 @@ export default function VideoGamesPage() {
 				← All videos
 			</Link>
 			<div className="mt-4 flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-				<img
-					src={thumbSrc}
-					alt=""
-					className="h-24 w-40 shrink-0 rounded-lg object-cover"
-				/>
+				<ViewfinderFrame size="md">
+					<img src={thumbSrc} alt="" className="h-full w-full scale-[1.05] object-cover" />
+				</ViewfinderFrame>
 				<div>
 					<h2 className="text-2xl font-bold text-gray-900 dark:text-white">{data.video.title}</h2>
 					<p className="mt-1 text-gray-600 dark:text-gray-400">
@@ -88,23 +89,28 @@ export default function VideoGamesPage() {
 				</div>
 			</div>
 			{data.games.length === 0 ? (
-				<p className="mt-10 text-center text-gray-600 dark:text-gray-400">
-					No games for this video yet.{' '}
-					<Link
-						href={`/game-summary?videoId=${encodeURIComponent(data.video.id)}`}
-						className="text-blue-600 hover:underline dark:text-blue-400"
-					>
-						Create one
-					</Link>
-					.
-				</p>
+				<div className="mt-10 flex flex-col items-center text-center text-gray-600 dark:text-gray-400">
+					<EmptyStateIllustration variant="noVideoGames" className="mb-4 h-20 w-20" />
+					<p>
+						No games for this video yet.{' '}
+						<Link
+							href={`/game-summary?videoId=${encodeURIComponent(data.video.id)}`}
+							className="text-blue-600 hover:underline dark:text-blue-400"
+						>
+							Create one
+						</Link>
+						.
+					</p>
+				</div>
 			) : (
 				<ul className="mt-8 grid gap-4 sm:grid-cols-2">
 					{data.games.map((game) => (
 						<li key={game.id}>
 							<Link
 								href={`/game/${game.id}`}
-								className="block rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+								className={filmEdgeCardClassName(
+									'block rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800'
+								)}
 							>
 								<h3 className="font-semibold text-gray-900 dark:text-white">{game.title}</h3>
 								<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">

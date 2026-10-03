@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AdminSectionIcon } from '@/lib/brand/adminSectionIcons';
 import { auth } from '@/lib/auth/config';
 import { getDiscordAccountIdForUser } from '@/lib/auth/getDiscordAccountId';
 
@@ -15,26 +16,31 @@ const cardClass =
 const sections = [
 	{
 		href: '/admin/rules',
+		icon: 'rules',
 		title: 'Rule catalog',
 		description: 'Create and edit rule templates used in generated games.'
 	},
 	{
 		href: '/admin/games',
+		icon: 'games',
 		title: 'Games moderation',
 		description: 'Review shared games, expiry, and active status.'
 	},
 	{
 		href: '/admin/videos',
+		icon: 'videos',
 		title: 'Videos',
 		description: 'YouTube sync, visibility, and catalog management.'
 	},
 	{
 		href: '/admin/votes',
+		icon: 'votes',
 		title: 'Rule votes',
 		description: 'Moderation and stats for community rule ratings.'
 	},
 	{
 		href: '/admin/system',
+		icon: 'system',
 		title: 'System',
 		description: 'Dashboard, health checks, and audit log.'
 	}
@@ -63,7 +69,8 @@ export default async function AdminPage() {
 			<div className="grid gap-4 sm:grid-cols-2">
 				{sections.map((section) => (
 					<section key={section.href} className={cardClass} aria-labelledby={`admin-${section.href}`}>
-						<h2 id={`admin-${section.href}`} className="text-lg font-semibold">
+						<h2 id={`admin-${section.href}`} className="flex items-center text-lg font-semibold">
+							<AdminSectionIcon id={section.icon} />
 							{section.title}
 						</h2>
 						<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{section.description}</p>

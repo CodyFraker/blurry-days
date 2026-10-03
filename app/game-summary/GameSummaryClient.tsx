@@ -10,18 +10,14 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { GameSummaryStickyActions } from '@/components/GameSummaryStickyActions';
 import { RuleCard, type RuleView } from '@/components/RuleCard';
+import { FormatAspectIcon } from '@/components/brand/FormatAspectIcon';
+import { IsoTopPlate } from '@/components/brand/IsoTopPlate';
+import { ShutterSpinner } from '@/components/brand/ShutterSpinner';
+import { ViewfinderFrame } from '@/components/brand/ViewfinderFrame';
+import { filmFormats } from '@/lib/brand/filmFormats';
 import { getYoutubeThumbnailUrl } from '@/lib/youtube/thumbnailUrl';
 
 const isoValues: (number | 'PROGRAM')[] = [100, 200, 400, 800, 1600, 'PROGRAM'];
-
-const filmFormats = [
-	{ label: 'Panoramic', value: 3 },
-	{ label: 'Box Camera', value: 6 },
-	{ label: 'Land Camera', value: 8 },
-	{ label: 'Square Format', value: 12 },
-	{ label: 'Medium Format', value: 18 },
-	{ label: '35mm', value: 36 }
-];
 
 type Rule = RuleView;
 
@@ -278,11 +274,13 @@ export default function GameSummaryClient() {
 			<section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
 				<h2 className="mb-4 text-xl font-semibold">Selected Video</h2>
 				<div className="flex flex-col items-center gap-4 sm:flex-row">
-					<img
-						src={gameSettings.videoThumbnail || ''}
-						alt={gameSettings.videoTitle}
-						className="h-[120px] w-[160px] rounded-lg object-cover"
-					/>
+					<ViewfinderFrame size="md" frameNumber="01">
+						<img
+							src={gameSettings.videoThumbnail || ''}
+							alt={gameSettings.videoTitle}
+							className="h-full w-full scale-[1.05] object-cover"
+						/>
+					</ViewfinderFrame>
 					<div className="flex-1 text-center sm:text-left">
 						<h3 className="font-medium">{gameSettings.videoTitle}</h3>
 						<button
@@ -299,22 +297,24 @@ export default function GameSummaryClient() {
 			<div className="grid gap-6 md:grid-cols-2">
 				<section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
 					<h3 className="mb-4 text-lg font-semibold">🍻 Intoxication Level</h3>
-					<div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
-						{isoValues.map((value, index) => (
-							<button
-								key={String(value)}
-								type="button"
-								onClick={() => setIsoIndex(index)}
-								className={`min-h-11 w-full rounded-lg border-2 px-4 py-2 font-medium transition sm:min-w-[60px] sm:w-auto ${
-									index === isoIndex
-										? 'border-blue-600 bg-blue-600 text-white'
-										: 'border-gray-200 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700'
-								}`}
-							>
-								{value}
-							</button>
-						))}
-					</div>
+					<IsoTopPlate>
+						<div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
+							{isoValues.map((value, index) => (
+								<button
+									key={String(value)}
+									type="button"
+									onClick={() => setIsoIndex(index)}
+									className={`min-h-11 w-full rounded-lg border-2 px-4 py-2 font-medium transition sm:min-w-[60px] sm:w-auto ${
+										index === isoIndex
+											? 'border-blue-600 bg-blue-600 text-white'
+											: 'border-gray-200 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700'
+									}`}
+								>
+									{value}
+								</button>
+							))}
+						</div>
+					</IsoTopPlate>
 				</section>
 				<section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
 					<h3 className="mb-4 text-lg font-semibold">📸 Number of Rules</h3>
@@ -324,13 +324,16 @@ export default function GameSummaryClient() {
 								key={format.label}
 								type="button"
 								onClick={() => setSelectedFormatIndex(index)}
-								className={`flex justify-between rounded-lg border-2 px-4 py-2 transition ${
+								className={`flex items-center justify-between gap-2 rounded-lg border-2 px-4 py-2 transition ${
 									index === selectedFormatIndex
 										? 'border-blue-600 bg-blue-600 text-white'
 										: 'border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700'
 								}`}
 							>
-								<span>{format.label}</span>
+								<span className="flex items-center gap-2">
+									<FormatAspectIcon aspect={format.aspect} />
+									{format.label}
+								</span>
 								<span className="text-sm opacity-80">{format.value} rules</span>
 							</button>
 						))}
@@ -346,7 +349,14 @@ export default function GameSummaryClient() {
 						disabled={isGeneratingRules}
 						className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-lg font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
 					>
-						{isGeneratingRules ? 'Generating Rules...' : '🎲 Generate Rules'}
+						{isGeneratingRules ? (
+							<>
+								<ShutterSpinner className="h-5 w-5" />
+								Generating Rules...
+							</>
+						) : (
+							'Generate Rules'
+						)}
 					</button>
 				</div>
 			) : (
@@ -360,7 +370,14 @@ export default function GameSummaryClient() {
 								disabled={isRerolling}
 								className="min-h-11 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 sm:w-auto"
 							>
-								{isRerolling ? 'Rerolling...' : '🎲 Reroll All'}
+								{isRerolling ? (
+									<span className="inline-flex items-center gap-2">
+										<ShutterSpinner className="h-4 w-4" />
+										Rerolling...
+									</span>
+								) : (
+									'Reroll All'
+								)}
 							</button>
 							<button
 								type="button"
@@ -386,7 +403,11 @@ export default function GameSummaryClient() {
 											className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-gray-200 hover:bg-blue-50 dark:border-gray-600"
 											aria-label="Reroll rule"
 										>
-											{rerollingRules.has(rule.id) ? <span className="loading" /> : '🎲'}
+											{rerollingRules.has(rule.id) ? (
+												<ShutterSpinner className="h-4 w-4" />
+											) : (
+												'↻'
+											)}
 										</button>
 										<button
 											type="button"
@@ -408,7 +429,14 @@ export default function GameSummaryClient() {
 							disabled={isGenerating}
 							className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-lg font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
 						>
-							{isGenerating ? 'Creating Game...' : '🚀 Generate Game'}
+							{isGenerating ? (
+								<>
+									<ShutterSpinner className="h-5 w-5" />
+									Creating Game...
+								</>
+							) : (
+								'Generate Game'
+							)}
 						</button>
 						<p className="mt-2 text-sm text-gray-500">This will create your shareable drinking game!</p>
 					</div>

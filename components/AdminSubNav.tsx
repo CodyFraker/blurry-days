@@ -5,14 +5,14 @@ const linkClass =
 const activeClass =
 	'text-sm font-medium text-indigo-600 dark:text-indigo-400';
 
-const items = [
+const items: { href: string; label: string; exact?: boolean }[] = [
 	{ href: '/admin', label: 'Overview', exact: true },
 	{ href: '/admin/rules', label: 'Rules' },
 	{ href: '/admin/games', label: 'Games' },
 	{ href: '/admin/videos', label: 'Videos' },
 	{ href: '/admin/votes', label: 'Votes' },
 	{ href: '/admin/system', label: 'System' }
-] as const;
+];
 
 export function AdminSubNav({ pathname }: { pathname: string }) {
 	return (

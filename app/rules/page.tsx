@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { RulesPageHeader } from '@/components/RulesPageHeader';
 import { RulesCatalogCards } from '@/components/RulesCatalogCards';
 import { RulesCatalogTable } from '@/components/RulesCatalogTable';
 import { listRuleTemplates, parseListRulesQuery } from '@/lib/rules/ruleCatalog';
@@ -23,13 +24,7 @@ export default async function RulesPage({
 
 	return (
 		<div className="space-y-8">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Rules catalog</h1>
-				<p className="mt-2 text-gray-600 dark:text-gray-400">
-					All drinking game rules used across Grainydays games. Ratings will be open for voting
-					soon.
-				</p>
-			</div>
+			<RulesPageHeader />
 
 			<RulesCatalogCards rules={rules} />
 			<RulesCatalogTable rules={rules} />

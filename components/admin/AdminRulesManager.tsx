@@ -16,6 +16,8 @@ type AdminRule = {
 	thumbsDown: number;
 };
 
+type RuleCategory = (typeof CategoryEnum)[keyof typeof CategoryEnum];
+
 const categories = Object.values(CategoryEnum);
 const drinks = [
 	{ value: DrinkEnum.Sip, label: 'Sip' },
@@ -29,7 +31,13 @@ export function AdminRulesManager() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [includeDisabled, setIncludeDisabled] = useState(true);
-	const [form, setForm] = useState({
+	const [form, setForm] = useState<{
+		text: string;
+		category: RuleCategory;
+		weight: number;
+		baseDrink: number;
+		enabled: boolean;
+	}>({
 		text: '',
 		category: CategoryEnum.General,
 		weight: 1,
@@ -142,7 +150,12 @@ export function AdminRulesManager() {
 					<select
 						className="rounded border border-gray-300 p-2 text-sm dark:border-gray-600 dark:bg-gray-900"
 						value={form.category}
-						onChange={(e) => setForm({ ...form, category: e.target.value })}
+						onChange={(e) =>
+							setForm({
+								...form,
+								category: e.target.value as RuleCategory
+							})
+						}
 					>
 						{categories.map((c) => (
 							<option key={c} value={c}>{c}</option>

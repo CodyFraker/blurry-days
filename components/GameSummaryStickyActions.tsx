@@ -1,3 +1,5 @@
+import { ShutterSpinner } from '@/components/brand/ShutterSpinner';
+
 export function GameSummaryStickyActions({
 	isGenerating,
 	onGenerate
@@ -15,7 +17,14 @@ export function GameSummaryStickyActions({
 				disabled={isGenerating}
 				className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-lg font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
 			>
-				{isGenerating ? 'Creating Game...' : '🚀 Generate Game'}
+				{isGenerating ? (
+					<>
+						<ShutterSpinner className="h-5 w-5" />
+						Creating Game...
+					</>
+				) : (
+					'Generate Game'
+				)}
 			</button>
 		</div>
 	);
