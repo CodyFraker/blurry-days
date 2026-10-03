@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.github
+coverage
+.nyc_output
+*.md
+.env
+.env.*
+!.env.example
+npm-debug.log*
+Dockerfile.dev
+docker-compose.yml
+docker-compose.override.yml
+.cursor
+.vscode
+.idea

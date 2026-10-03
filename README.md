@@ -86,6 +86,41 @@ npm test
 RUN_INTEGRATION_TESTS=1 npm run test:integration
 ```
 
+Create the test database once if it does not exist (`grainydays_test`), then migrate both databases before integration tests.
+
+## CI and container images
+
+GitHub Actions workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request: unit tests, integration tests (Postgres service), `npm run lint`, and `npm run build`. On pushes to `main` and tags `v*`, it also builds and pushes a production image to GitHub Container Registry (`ghcr.io/<owner>/<repo>`) with `latest` (main only), `sha-<short>`, and semver tags.
+
+Pull a published image (after setting package visibility under **Packages** in the repo if needed):
+
+```bash
+docker pull ghcr.io/<owner>/<repo>:latest
+```
+
+Runtime env (`DATABASE_URL`, `AUTH_SECRET`, `DISCORD_*`, etc.) must be provided when you run the container; the image only includes build-time placeholders.
+
+### Run CI locally
+
+Mirror the workflow before you push:
+
+```powershell
+# Windows (Postgres on localhost:5432, e.g. docker compose up -d postgres)
+.\scripts\ci-local.ps1
+.\scripts\ci-local.ps1 --docker   # also build production Dockerfile
+```
+
+```bash
+# macOS / Linux
+chmod +x scripts/ci-local.sh
+./scripts/ci-local.sh
+./scripts/ci-local.sh --docker
+```
+
+Optional: [nektos/act](https://github.com/nektos/act) (`act -j test`) to exercise the workflow file; GHCR push steps need a real `GITHUB_TOKEN`. [actionlint](https://github.com/rhysd/actionlint) validates workflow YAML locally.
+
+After enabling Actions, consider branch protection that requires the **CI** workflow on pull requests.
+
 ## Scripts
 
 - `npm run dev` — development server

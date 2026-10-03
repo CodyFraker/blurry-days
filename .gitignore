@@ -40,9 +40,6 @@ coverage/
 *.db
 *.sqlite
 
-# Docker
-.dockerignore
-
 # Temporary files
 *.tmp
 *.temp 
