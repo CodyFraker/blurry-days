@@ -102,22 +102,37 @@ Runtime env (`DATABASE_URL`, `AUTH_SECRET`, `DISCORD_*`, etc.) must be provided 
 
 ### Run CI locally
 
-Mirror the workflow before you push:
+**Recommended (matches GitHub Actions: Linux Node 20 + Postgres 15, including `npm ci` on Linux):**
 
 ```powershell
-# Windows (Postgres on localhost:5432, e.g. docker compose up -d postgres)
-.\scripts\ci-local.ps1
-.\scripts\ci-local.ps1 --docker   # also build production Dockerfile
+# Windows — requires Docker Desktop
+.\scripts\ci-docker.ps1
+.\scripts\ci-docker.ps1 --docker   # also build production Dockerfile
+# or
+npm run ci:docker
 ```
 
 ```bash
-# macOS / Linux
-chmod +x scripts/ci-local.sh
-./scripts/ci-local.sh
-./scripts/ci-local.sh --docker
+chmod +x scripts/ci-docker.sh scripts/ci-github-test.sh scripts/ci-local.sh
+./scripts/ci-docker.sh
+./scripts/ci-docker.sh --docker
+# or
+npm run ci:docker
 ```
 
-Optional: [nektos/act](https://github.com/nektos/act) (`act -j test`) to exercise the workflow file; GHCR push steps need a real `GITHUB_TOKEN`. [actionlint](https://github.com/rhysd/actionlint) validates workflow YAML locally.
+Uses [docker-compose.ci.yml](docker-compose.ci.yml) (isolated Postgres; does not use port 5432 on the host). Steps mirror the **test** job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+**Faster on your machine (host Node + `docker compose` Postgres on localhost:5432):**
+
+```powershell
+.\scripts\ci-local.ps1
+```
+
+```bash
+./scripts/ci-local.sh
+```
+
+Optional: [nektos/act](https://github.com/nektos/act) (`act -j test`) runs the workflow YAML; service containers and GHCR push need extra setup on Windows. [actionlint](https://github.com/rhysd/actionlint) validates workflow YAML.
 
 After enabling Actions, consider branch protection that requires the **CI** workflow on pull requests.
 

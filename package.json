@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "ci:docker": "docker compose -f docker-compose.ci.yml run --rm ci bash scripts/ci-github-test.sh",
+    "ci:local": "bash scripts/ci-local.sh",
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

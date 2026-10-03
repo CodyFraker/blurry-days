@@ -2,54 +2,46 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $Root
 
-if (-not $env:AUTH_SECRET) { $env:AUTH_SECRET = "ci-placeholder-auth-secret-min-32-chars!!" }
-if (-not $env:AUTH_URL) { $env:AUTH_URL = "http://localhost:3000" }
-if (-not $env:DISCORD_CLIENT_ID) { $env:DISCORD_CLIENT_ID = "123456789012345678" }
-if (-not $env:DISCORD_CLIENT_SECRET) { $env:DISCORD_CLIENT_SECRET = "ci-placeholder-discord-secret" }
-if (-not $env:DATABASE_URL) { $env:DATABASE_URL = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays" }
-if (-not $env:DATABASE_URL_TEST) { $env:DATABASE_URL_TEST = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays_test" }
-
-$RunDocker = $args -contains "--docker"
-
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 	Write-Error "Node.js is required (CI uses Node 20)."
 }
 
-$psql = Get-Command psql -ErrorAction SilentlyContinue
-if (-not $psql) {
-	Write-Error "psql not found. Start Postgres (docker compose up -d postgres) and install the PostgreSQL client."
-}
-
+$env:AUTH_SECRET = "ci-placeholder-auth-secret-min-32-chars!!"
+$env:AUTH_URL = "http://localhost:3000"
+$env:DATABASE_URL = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays"
+$env:DATABASE_URL_TEST = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays_test"
+$env:CI_DISCORD_CLIENT_ID = "123456789012345678"
+$env:CI_DISCORD_CLIENT_SECRET = "ci-placeholder-discord-secret"
+$env:PGHOST = "localhost"
+$env:PGPORT = "5432"
+$env:PGUSER = "grainydays"
 $env:PGPASSWORD = "grainydays_dev"
+
+function Invoke-Psql {
+	param([string[]]$PsqlArgs)
+	if (Get-Command psql -ErrorAction SilentlyContinue) {
+		& psql @PsqlArgs
+		return
+	}
+	$running = docker compose ps postgres --status running -q 2>$null
+	if (-not $running) {
+		Write-Host "Starting postgres via docker compose..."
+		docker compose up -d postgres
+		Start-Sleep -Seconds 5
+	}
+	docker compose exec -T -e PGPASSWORD=grainydays_dev postgres psql @PsqlArgs
+}
+
 try {
-	psql -h localhost -U grainydays -d grainydays -c "SELECT 1" 2>$null | Out-Null
+	Invoke-Psql @("-h", "localhost", "-U", "grainydays", "-d", "grainydays", "-c", "SELECT 1") | Out-Null
 } catch {
-	Write-Error "Postgres is not reachable at localhost:5432. Run: docker compose up -d postgres"
+	Write-Error "Postgres is not reachable on localhost:5432. Run: docker compose up -d postgres`nOr use: npm run ci:docker"
 }
 
-$exists = psql -h localhost -U grainydays -d grainydays -tAc "SELECT 1 FROM pg_database WHERE datname = 'grainydays_test'"
-if ($exists -ne "1") {
-	psql -h localhost -U grainydays -d grainydays -c "CREATE DATABASE grainydays_test"
+$Bash = Get-Command bash -ErrorAction SilentlyContinue
+if ($Bash) {
+	& bash scripts/ci-github-test.sh @args
+	exit $LASTEXITCODE
 }
 
-npm ci
-npm run db:migrate
-$env:DATABASE_URL = $env:DATABASE_URL_TEST
-npm run db:migrate
-$env:DATABASE_URL = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays"
-
-npm test
-$env:RUN_INTEGRATION_TESTS = "1"
-$env:DATABASE_URL = $env:DATABASE_URL_TEST
-npm run test:integration
-Remove-Item Env:RUN_INTEGRATION_TESTS -ErrorAction SilentlyContinue
-$env:DATABASE_URL = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays"
-
-npm run lint
-npm run build
-
-if ($RunDocker) {
-	$Image = if ($env:CI_LOCAL_IMAGE) { $env:CI_LOCAL_IMAGE } else { "ghcr.io/YOUR_GITHUB_OWNER/blurry-days:local" }
-	docker build -f Dockerfile -t $Image .
-	Write-Host "Built $Image"
-}
+Write-Error "Git Bash or WSL bash is required for ci-local.ps1, or run: npm run ci:docker"

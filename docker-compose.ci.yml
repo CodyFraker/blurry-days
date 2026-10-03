@@ -1,0 +1,34 @@
+name: blurry-days-ci
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: grainydays
+      POSTGRES_PASSWORD: grainydays_dev
+      POSTGRES_DB: grainydays
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grainydays -d grainydays"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ci:
+    image: node:20-bookworm-slim
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      AUTH_SECRET: ci-placeholder-auth-secret-min-32-chars!!
+      AUTH_URL: http://localhost:3000
+      DATABASE_URL: postgres://grainydays:grainydays_dev@postgres:5432/grainydays
+      DATABASE_URL_TEST: postgres://grainydays:grainydays_dev@postgres:5432/grainydays_test
+      CI_DISCORD_CLIENT_ID: "123456789012345678"
+      CI_DISCORD_CLIENT_SECRET: ci-placeholder-discord-secret
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: grainydays
+      PGPASSWORD: grainydays_dev
