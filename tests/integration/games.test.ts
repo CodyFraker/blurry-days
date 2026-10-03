@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { getTestDb, truncateGameTables } from '../helpers/db';
-import { games, rules } from '@/lib/db/schema';
+import { games, rules, ruleTemplates } from '@/lib/db/schema';
+import { CategoryEnum, DrinkEnum } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -37,8 +38,19 @@ describe.skipIf(!hasTestDb)('games persistence', () => {
 			expiresAt
 		});
 
+		const [template] = await db
+			.insert(ruleTemplates)
+			.values({
+				text: 'Take a sip when {host} speaks',
+				category: CategoryEnum.General,
+				weight: 1,
+				baseDrink: DrinkEnum.Sip
+			})
+			.returning();
+
 		await db.insert(rules).values({
 			gameId,
+			ruleTemplateId: template.id,
 			text: 'Take a sip',
 			category: 'general',
 			weight: 1,
@@ -50,5 +62,6 @@ describe.skipIf(!hasTestDb)('games persistence', () => {
 		const loaded = await db.select().from(rules).where(eq(rules.gameId, gameId));
 		expect(loaded).toHaveLength(1);
 		expect(loaded[0].text).toBe('Take a sip');
+		expect(loaded[0].ruleTemplateId).toBe(template.id);
 	});
 });

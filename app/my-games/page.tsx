@@ -72,7 +72,7 @@ export default function MyGamesPage() {
 
 	return (
 		<div>
-			<h2 className="mb-8 text-center text-3xl font-bold">My Games</h2>
+			<h2 className="mb-8 text-center text-2xl font-bold sm:text-3xl">My Games</h2>
 			{games.length === 0 ? (
 				<p className="text-center text-gray-600 dark:text-gray-400">
 					No saved games yet.{' '}
@@ -87,13 +87,14 @@ export default function MyGamesPage() {
 						<li key={game.id}>
 							<Link
 								href={`/game/${game.id}`}
-								className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+								className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md sm:flex-row dark:border-gray-700 dark:bg-gray-800"
 							>
 								{game.videoThumbnail && (
 									<img
 										src={game.videoThumbnail}
 										alt=""
-										className="h-20 w-28 shrink-0 rounded-lg object-cover"
+										loading="lazy"
+										className="h-20 w-full shrink-0 rounded-lg object-cover sm:w-28"
 									/>
 								)}
 								<div className="min-w-0">

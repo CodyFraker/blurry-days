@@ -6,7 +6,8 @@ import {
 	integer,
 	doublePrecision,
 	boolean,
-	primaryKey
+	primaryKey,
+	smallint
 } from 'drizzle-orm/pg-core';
 import type { AdapterAccount } from 'next-auth/adapters';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
@@ -97,28 +98,62 @@ export const games = pgTable('games', {
 	isActive: boolean('is_active').default(true).notNull()
 });
 
+const categoryColumn = {
+	enum: [
+		CategoryEnum.Camera,
+		CategoryEnum.Film,
+		CategoryEnum.Technique,
+		CategoryEnum.Location,
+		CategoryEnum.Equipment,
+		CategoryEnum.General
+	] as [string, ...string[]]
+};
+
+export const ruleTemplates = pgTable('rule_templates', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	text: text('text').notNull(),
+	category: text('category', categoryColumn).notNull(),
+	weight: doublePrecision('weight').notNull(),
+	baseDrink: integer('base_drink').notNull(),
+	usageCount: integer('usage_count').default(0).notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
 export const rules = pgTable('rules', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	gameId: uuid('game_id')
 		.references(() => games.id, { onDelete: 'cascade' })
 		.notNull(),
+	ruleTemplateId: uuid('rule_template_id').references(() => ruleTemplates.id, {
+		onDelete: 'set null'
+	}),
 	text: text('text').notNull(),
-	category: text('category', {
-		enum: [
-			CategoryEnum.Camera,
-			CategoryEnum.Film,
-			CategoryEnum.Technique,
-			CategoryEnum.Location,
-			CategoryEnum.Equipment,
-			CategoryEnum.General
-		] as [string, ...string[]]
-	}).notNull(),
+	category: text('category', categoryColumn).notNull(),
 	weight: doublePrecision('weight').notNull(),
 	baseDrink: integer('base_drink').notNull(),
 	isCustom: boolean('is_custom').default(false).notNull(),
 	order: integer('order').notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
+
+export const ruleVotes = pgTable(
+	'rule_votes',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		ruleTemplateId: uuid('rule_template_id')
+			.notNull()
+			.references(() => ruleTemplates.id, { onDelete: 'cascade' }),
+		vote: smallint('vote').notNull(),
+		createdAt: timestamp('created_at').defaultNow().notNull()
+	},
+	(ruleVote) => ({
+		compoundKey: primaryKey({
+			columns: [ruleVote.userId, ruleVote.ruleTemplateId]
+		})
+	})
+);
 
 export const youtubeVideos = pgTable('youtube_videos', {
 	id: text('id').primaryKey(),
@@ -129,42 +164,24 @@ export const youtubeVideos = pgTable('youtube_videos', {
 	lastFetched: timestamp('last_fetched').defaultNow().notNull()
 });
 
-export const questions = pgTable('questions', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	sheetId: text('sheet_id').notNull(),
-	text: text('text').notNull(),
-	category: text('category', {
-		enum: [
-			CategoryEnum.Camera,
-			CategoryEnum.Film,
-			CategoryEnum.Technique,
-			CategoryEnum.Location,
-			CategoryEnum.Equipment,
-			CategoryEnum.General
-		] as [string, ...string[]]
-	}).notNull(),
-	weight: doublePrecision('weight').notNull(),
-	baseDrink: integer('base_drink').notNull(),
-	order: integer('order').notNull(),
-	lastSynced: timestamp('last_synced').defaultNow().notNull(),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
-
 export const insertGameSchema = createInsertSchema(games);
 export const selectGameSchema = createSelectSchema(games);
+export const insertRuleTemplateSchema = createInsertSchema(ruleTemplates);
+export const selectRuleTemplateSchema = createSelectSchema(ruleTemplates);
 export const insertRuleSchema = createInsertSchema(rules);
 export const selectRuleSchema = createSelectSchema(rules);
+export const insertRuleVoteSchema = createInsertSchema(ruleVotes);
+export const selectRuleVoteSchema = createSelectSchema(ruleVotes);
 export const insertYoutubeVideoSchema = createInsertSchema(youtubeVideos);
 export const selectYoutubeVideoSchema = createSelectSchema(youtubeVideos);
-export const insertQuestionSchema = createInsertSchema(questions);
-export const selectQuestionSchema = createSelectSchema(questions);
 
 export type Game = z.infer<typeof selectGameSchema>;
 export type NewGame = z.infer<typeof insertGameSchema>;
+export type RuleTemplate = z.infer<typeof selectRuleTemplateSchema>;
+export type NewRuleTemplate = z.infer<typeof insertRuleTemplateSchema>;
 export type Rule = z.infer<typeof selectRuleSchema>;
 export type NewRule = z.infer<typeof insertRuleSchema>;
+export type RuleVote = z.infer<typeof selectRuleVoteSchema>;
+export type NewRuleVote = z.infer<typeof insertRuleVoteSchema>;
 export type YoutubeVideo = z.infer<typeof selectYoutubeVideoSchema>;
 export type NewYoutubeVideo = z.infer<typeof insertYoutubeVideoSchema>;
-export type Question = z.infer<typeof selectQuestionSchema>;
-export type NewQuestion = z.infer<typeof insertQuestionSchema>;

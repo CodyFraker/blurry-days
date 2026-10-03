@@ -87,13 +87,16 @@ export default function HomePage() {
 
 	return (
 		<div>
-			<div className="mb-12 text-center">
-				<h2 className="text-3xl font-bold text-gray-900 dark:text-white">Choose Your Video</h2>
+			<div className="mb-8 text-center sm:mb-12">
+				<h2 className="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">Choose Your Video</h2>
 				<p className="mx-auto mt-2 max-w-xl text-gray-600 dark:text-gray-400">
 					Select a film photography video to generate a custom drinking game
 				</p>
+				<p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+					{videos.length} {videos.length === 1 ? 'video' : 'videos'}
+				</p>
 			</div>
-			<div className="flex flex-col gap-4">
+			<div className="mx-auto max-w-3xl space-y-3">
 				{displayedVideos.map((video) => (
 					<VideoListItem
 						key={video.id}

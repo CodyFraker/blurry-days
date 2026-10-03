@@ -66,16 +66,17 @@ export default function GamePage() {
 	const label = intoxicationLabels[game.intoxicationLevel - 1] || 'Unknown';
 
 	return (
-		<div className="space-y-10">
+		<div className="space-y-6 sm:space-y-10">
 			<div className="grid gap-8 lg:grid-cols-[1fr_auto]">
 				<div className="flex flex-col gap-4 sm:flex-row">
 					<img
 						src={game.videoThumbnail}
 						alt={game.videoTitle}
-						className="h-auto w-full max-w-[300px] rounded-xl border border-gray-200 object-cover dark:border-gray-700"
+						loading="lazy"
+						className="mx-auto h-auto w-full max-w-[300px] rounded-xl border border-gray-200 object-cover sm:mx-0 dark:border-gray-700"
 					/>
 					<div>
-						<h1 className="text-3xl font-bold text-gray-900 dark:text-white">{game.title}</h1>
+						<h1 className="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">{game.title}</h1>
 						<p className="mt-2 text-lg text-gray-600 dark:text-gray-400">{game.videoTitle}</p>
 						<div className="mt-4 flex flex-wrap gap-2">
 							<span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -91,7 +92,7 @@ export default function GamePage() {
 					<button
 						type="button"
 						onClick={copyShareLink}
-						className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+						className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
 					>
 						{copied ? '✅ Copied!' : '📋 Share Game'}
 					</button>

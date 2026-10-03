@@ -15,6 +15,13 @@
       "when": 1750720137567,
       "tag": "0002_auth_user_games",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1750720137568,
+      "tag": "0003_rule_catalog",
+      "breakpoints": true
     }
   ]
 }

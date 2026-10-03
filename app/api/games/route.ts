@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules } from '@/lib/db/schema';
 import { validateCreateGameBody } from '@/lib/games/validateCreateGame';
+import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
 import { auth } from '@/lib/auth/config';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
 			gameRules.map((rule, index) =>
 				db.insert(rules).values({
 					gameId,
+					ruleTemplateId: rule.isCustom ? null : rule.ruleTemplateId ?? null,
 					text: rule.text,
 					category: rule.category,
 					weight: rule.weight ?? 1.0,
@@ -51,6 +53,10 @@ export async function POST(request: Request) {
 					order: index + 1
 				})
 			)
+		);
+
+		await incrementRuleTemplateUsage(
+			gameRules.filter((rule) => !rule.isCustom).map((rule) => rule.ruleTemplateId)
 		);
 
 		const createdRules = await db

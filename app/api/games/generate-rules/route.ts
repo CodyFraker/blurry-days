@@ -9,7 +9,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 		}
 
-		const rules = generateRulesForVideo({
+		const rules = await generateRulesForVideo({
 			videoId,
 			videoTitle,
 			numberOfRules,

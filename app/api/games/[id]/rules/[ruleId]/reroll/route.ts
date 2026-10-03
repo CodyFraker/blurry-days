@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules } from '@/lib/db/schema';
-import { selectRules, calculateEffectiveDrink } from '@/lib/rules/ruleEngine';
+import {
+	selectRules,
+	calculateEffectiveDrink,
+	substituteHostInRuleText
+} from '@/lib/rules/ruleEngine';
+import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
 import { eq, and, gte } from 'drizzle-orm';
 
 export async function POST(
@@ -41,7 +46,7 @@ export async function POST(
 			return NextResponse.json({ error: 'Rule not found or is custom' }, { status: 404 });
 		}
 
-		const newRules = selectRules(game.intoxicationLevel, 1);
+		const newRules = await selectRules(game.intoxicationLevel, 1);
 		if (newRules.length === 0) {
 			return NextResponse.json({ error: 'Failed to generate new rule' }, { status: 500 });
 		}
@@ -52,13 +57,16 @@ export async function POST(
 		const updatedRule = await db
 			.update(rules)
 			.set({
-				text: newRule.text,
+				ruleTemplateId: newRule.id,
+				text: substituteHostInRuleText(newRule.text, game.videoTitle),
 				category: newRule.category,
 				weight: newRule.weight,
 				baseDrink: effectiveDrink
 			})
 			.where(eq(rules.id, ruleId))
 			.returning();
+
+		await incrementRuleTemplateUsage([newRule.id]);
 
 		return NextResponse.json({
 			rule: {

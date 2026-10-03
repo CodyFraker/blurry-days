@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules } from '@/lib/db/schema';
-import { selectRules, calculateEffectiveDrink } from '@/lib/rules/ruleEngine';
+import {
+	selectRules,
+	calculateEffectiveDrink,
+	substituteHostInRuleText
+} from '@/lib/rules/ruleEngine';
+import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
 import { eq, and, gte } from 'drizzle-orm';
 
 export async function POST(
@@ -33,7 +38,7 @@ export async function POST(
 			.delete(rules)
 			.where(and(eq(rules.gameId, id), eq(rules.isCustom, false)));
 
-		const selectedRules = selectRules(game.intoxicationLevel, 5);
+		const selectedRules = await selectRules(game.intoxicationLevel, 5);
 
 		const customRules = await db
 			.select()
@@ -46,7 +51,8 @@ export async function POST(
 				const effectiveDrink = calculateEffectiveDrink(rule.baseDrink, game.intoxicationLevel);
 				return db.insert(rules).values({
 					gameId: id,
-					text: rule.text,
+					ruleTemplateId: rule.id,
+					text: substituteHostInRuleText(rule.text, game.videoTitle),
 					category: rule.category,
 					weight: rule.weight,
 					baseDrink: effectiveDrink,
@@ -55,6 +61,8 @@ export async function POST(
 				});
 			})
 		);
+
+		await incrementRuleTemplateUsage(selectedRules.map((rule) => rule.id));
 
 		const updatedRules = await db
 			.select()

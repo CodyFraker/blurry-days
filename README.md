@@ -14,11 +14,20 @@ A web app that generates custom drinking games from [Grainydays](https://www.you
 
 ## Quick start (Docker)
 
+Copy environment variables first (Auth.js requires `AUTH_SECRET`; Discord sign-in needs OAuth credentials):
+
+```bash
+cp .env.example .env.local
+# Set AUTH_SECRET (e.g. openssl rand -base64 32) and Discord OAuth values in .env.local
+```
+
 ```bash
 docker-compose up -d
 # App: http://localhost:3000
 # Postgres: localhost:5432 (grainydays / grainydays_dev)
 ```
+
+The app container runs `next dev` with your repo bind-mounted for hot reload. If changes do not appear, recreate the app service (`docker compose up -d --build app`). On some hosts (often Docker Desktop on Windows), bind mounts do not emit file events into Linux containers; compose sets `WATCHPACK_POLLING=true` for the webpack dev watcher (this project uses webpack for `next dev`, not Turbopack). If hot reload already works without polling on your machine, remove or comment out that variable in `docker-compose.yml`, or override it in a local `docker-compose.override.yml`.
 
 Run migrations after Postgres is up:
 
@@ -53,9 +62,10 @@ npm run dev
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `AUTH_URL` | App URL (e.g. `http://localhost:3000`) |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | Discord OAuth |
-| `GOOGLE_SHEETS_*` | Optional; sync rule questions from Sheets |
 
 Health check: `GET /api/health`
+
+Rules catalog API: `GET /api/rules?page=1&pageSize=25`
 
 ## Testing
 

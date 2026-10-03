@@ -27,14 +27,21 @@ services:
       - .:/app:Z
       - /app/node_modules
       - /app/.next
+    env_file:
+      - path: .env.local
+        required: false
     environment:
       - DATABASE_URL=postgres://grainydays:grainydays_dev@postgres:5432/grainydays
       - AUTH_URL=http://localhost:3000
+      - AUTH_SECRET=${AUTH_SECRET:-dev-only-set-AUTH_SECRET-in-env-local}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
       - NODE_ENV=development
+      - WATCHPACK_POLLING=${WATCHPACK_POLLING:-true}
     depends_on:
       postgres:
         condition: service_healthy
-    command: npm run dev
+    command: npm run dev:docker
 
 volumes:
   postgres_data:

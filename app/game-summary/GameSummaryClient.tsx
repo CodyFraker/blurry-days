@@ -8,7 +8,9 @@ import { CategoryEnum, DrinkEnum } from '@/lib/db/schema';
 import { getDrinkName } from '@/lib/rules/ruleEngine';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorPanel } from '@/components/ErrorPanel';
+import { GameSummaryStickyActions } from '@/components/GameSummaryStickyActions';
 import { RuleCard, type RuleView } from '@/components/RuleCard';
+import { getYoutubeThumbnailUrl } from '@/lib/youtube/thumbnailUrl';
 
 const isoValues: (number | 'PROGRAM')[] = [100, 200, 400, 800, 1600, 'PROGRAM'];
 
@@ -223,7 +225,8 @@ export default function GameSummaryClient() {
 						text: rule.text,
 						category: rule.category,
 						baseDrink: rule.baseDrink,
-						isCustom: rule.isCustom || false
+						isCustom: rule.isCustom || false,
+						ruleTemplateId: rule.ruleTemplateId
 					}))
 				})
 			});
@@ -264,9 +267,9 @@ export default function GameSummaryClient() {
 	}
 
 	return (
-		<div className="space-y-10">
+		<div className={`space-y-6 sm:space-y-10 ${rules.length > 0 ? 'pb-24 sm:pb-0' : ''}`}>
 			<div className="text-center">
-				<h1 className="text-3xl font-bold">🎬 Create Your Drinking Game</h1>
+				<h1 className="text-2xl font-bold sm:text-3xl">🎬 Create Your Drinking Game</h1>
 				<p className="text-gray-600 dark:text-gray-400">
 					Customize your settings and rules before generating your game
 				</p>
@@ -296,13 +299,13 @@ export default function GameSummaryClient() {
 			<div className="grid gap-6 md:grid-cols-2">
 				<section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
 					<h3 className="mb-4 text-lg font-semibold">🍻 Intoxication Level</h3>
-					<div className="flex flex-wrap justify-center gap-2">
+					<div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
 						{isoValues.map((value, index) => (
 							<button
 								key={String(value)}
 								type="button"
 								onClick={() => setIsoIndex(index)}
-								className={`min-w-[60px] rounded-lg border-2 px-4 py-2 font-medium transition ${
+								className={`min-h-11 w-full rounded-lg border-2 px-4 py-2 font-medium transition sm:min-w-[60px] sm:w-auto ${
 									index === isoIndex
 										? 'border-blue-600 bg-blue-600 text-white'
 										: 'border-gray-200 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700'
@@ -348,21 +351,21 @@ export default function GameSummaryClient() {
 				</div>
 			) : (
 				<section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-					<div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+					<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 						<h2 className="text-xl font-semibold">📜 Your Rules</h2>
-						<div className="flex flex-wrap gap-2">
+						<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
 							<button
 								type="button"
 								onClick={rerollRules}
 								disabled={isRerolling}
-								className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+								className="min-h-11 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 sm:w-auto"
 							>
 								{isRerolling ? 'Rerolling...' : '🎲 Reroll All'}
 							</button>
 							<button
 								type="button"
 								onClick={() => setCustomModalOpen(true)}
-								className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+								className="min-h-11 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:w-auto"
 							>
 								✨ Add Custom Rule
 							</button>
@@ -380,7 +383,7 @@ export default function GameSummaryClient() {
 											type="button"
 											onClick={() => rerollSingleRule(index)}
 											disabled={rerollingRules.has(rule.id)}
-											className="rounded-lg border border-gray-200 p-2 hover:bg-blue-50 dark:border-gray-600"
+											className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-gray-200 hover:bg-blue-50 dark:border-gray-600"
 											aria-label="Reroll rule"
 										>
 											{rerollingRules.has(rule.id) ? <span className="loading" /> : '🎲'}
@@ -388,7 +391,7 @@ export default function GameSummaryClient() {
 										<button
 											type="button"
 											onClick={() => deleteRule(rule.id)}
-											className="rounded-lg border border-gray-200 p-2 hover:bg-red-50 dark:border-gray-600"
+											className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-gray-200 hover:bg-red-50 dark:border-gray-600"
 											aria-label="Delete rule"
 										>
 											🗑️
@@ -398,12 +401,12 @@ export default function GameSummaryClient() {
 							/>
 						))}
 					</div>
-					<div className="mt-8 border-t border-gray-200 pt-8 text-center dark:border-gray-700">
+					<div className="mt-8 hidden border-t border-gray-200 pt-8 text-center sm:block dark:border-gray-700">
 						<button
 							type="button"
 							onClick={generateGame}
 							disabled={isGenerating}
-							className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-lg font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+							className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-lg font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
 						>
 							{isGenerating ? 'Creating Game...' : '🚀 Generate Game'}
 						</button>
@@ -412,10 +415,14 @@ export default function GameSummaryClient() {
 				</section>
 			)}
 
+			{rules.length > 0 && (
+				<GameSummaryStickyActions isGenerating={isGenerating} onGenerate={generateGame} />
+			)}
+
 			<Dialog.Root open={customModalOpen} onOpenChange={setCustomModalOpen}>
 				<Dialog.Portal>
 					<Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-					<Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[90%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+					<Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85dvh] w-[90%] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-xl dark:border-gray-700 dark:bg-gray-800">
 						<Dialog.Title className="text-xl font-semibold">✨ Add a Custom Rule</Dialog.Title>
 						<form onSubmit={addCustomRule} className="mt-4 space-y-4">
 							<div>
@@ -483,7 +490,7 @@ export default function GameSummaryClient() {
 			<Dialog.Root open={videoModalOpen} onOpenChange={setVideoModalOpen}>
 				<Dialog.Portal>
 					<Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-					<Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[90%] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+					<Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85dvh] w-[90%] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-xl dark:border-gray-700 dark:bg-gray-800">
 						<Dialog.Title className="text-xl font-semibold">🎬 Choose a Different Video</Dialog.Title>
 						<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 							{videos.slice(0, 12).map((video) => (
@@ -497,7 +504,12 @@ export default function GameSummaryClient() {
 											: 'border-gray-200 dark:border-gray-600'
 									}`}
 								>
-									<img src={video.thumbnail || ''} alt="" className="h-[120px] w-full object-cover" />
+									<img
+										src={getYoutubeThumbnailUrl(video.id)}
+										alt=""
+										loading="lazy"
+										className="aspect-video h-[120px] w-full object-cover"
+									/>
 									<p className="p-2 text-sm font-medium line-clamp-2">{video.title}</p>
 								</button>
 							))}

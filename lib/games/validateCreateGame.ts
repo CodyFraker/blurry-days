@@ -5,7 +5,8 @@ const ruleSchema = z.object({
 	category: z.string().min(1),
 	baseDrink: z.number(),
 	isCustom: z.boolean().optional(),
-	weight: z.number().optional()
+	weight: z.number().optional(),
+	ruleTemplateId: z.string().uuid().optional()
 });
 
 export const createGameBodySchema = z.object({

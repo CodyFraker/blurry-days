@@ -1,133 +1,28 @@
-import { CategoryEnum, DrinkEnum } from '@/lib/db/schema';
-import type { Rule } from '@/lib/db/schema';
+import { db } from '@/lib/db';
+import { CategoryEnum, DrinkEnum, ruleTemplates } from '@/lib/db/schema';
 
-const baseRules: Omit<Rule, 'id' | 'gameId' | 'order' | 'createdAt'>[] = [
-	{
-		text: 'Every time {host} mentions a specific camera model',
-		category: CategoryEnum.Camera,
-		weight: 0.8,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'When {host} shows the camera\'s viewfinder',
-		category: CategoryEnum.Camera,
-		weight: 0.6,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'If {host} adjusts camera settings on screen',
-		category: CategoryEnum.Camera,
-		weight: 0.7,
-		baseDrink: DrinkEnum.Gulp,
-		isCustom: false
-	},
-	{
-		text: 'Every time {host} mentions film stock',
-		category: CategoryEnum.Film,
-		weight: 0.9,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'When {host} shows film being loaded',
-		category: CategoryEnum.Film,
-		weight: 0.5,
-		baseDrink: DrinkEnum.Gulp,
-		isCustom: false
-	},
-	{
-		text: 'If {host} discusses film development',
-		category: CategoryEnum.Film,
-		weight: 0.6,
-		baseDrink: DrinkEnum.Pull,
-		isCustom: false
-	},
-	{
-		text: 'When {host} explains a photography technique',
-		category: CategoryEnum.Technique,
-		weight: 0.7,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'If {host} demonstrates manual focus',
-		category: CategoryEnum.Technique,
-		weight: 0.5,
-		baseDrink: DrinkEnum.Gulp,
-		isCustom: false
-	},
-	{
-		text: 'When {host} talks about composition',
-		category: CategoryEnum.Technique,
-		weight: 0.6,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'Every time {host} mentions a location',
-		category: CategoryEnum.Location,
-		weight: 0.8,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'When {host} shows outdoor shooting',
-		category: CategoryEnum.Location,
-		weight: 0.6,
-		baseDrink: DrinkEnum.Gulp,
-		isCustom: false
-	},
-	{
-		text: 'When {host} mentions any photography equipment',
-		category: CategoryEnum.Equipment,
-		weight: 0.7,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'If {host} shows a tripod',
-		category: CategoryEnum.Equipment,
-		weight: 0.4,
-		baseDrink: DrinkEnum.Gulp,
-		isCustom: false
-	},
-	{
-		text: 'Every time {host} says \'film photography\'',
-		category: CategoryEnum.General,
-		weight: 0.9,
-		baseDrink: DrinkEnum.Sip,
-		isCustom: false
-	},
-	{
-		text: 'When {host} shows the final photo',
-		category: CategoryEnum.General,
-		weight: 0.8,
-		baseDrink: DrinkEnum.Pull,
-		isCustom: false
-	},
-	{
-		text: 'If {host} mentions the cost of anything',
-		category: CategoryEnum.General,
-		weight: 0.6,
-		baseDrink: DrinkEnum.Gulp,
-		isCustom: false
-	}
-];
+export type RuleTemplatePoolItem = {
+	id: string;
+	text: string;
+	category: (typeof CategoryEnum)[keyof typeof CategoryEnum];
+	weight: number;
+	baseDrink: number;
+};
 
-export function selectRules(intoxicationLevel: number, maxRules: number = 5): typeof baseRules {
+export function selectRulesFromPool(
+	pool: RuleTemplatePoolItem[],
+	_intoxicationLevel: number,
+	maxRules: number = 5
+): RuleTemplatePoolItem[] {
 	const categories = Object.values(CategoryEnum) as (typeof CategoryEnum)[keyof typeof CategoryEnum][];
 	const selectedCategories = shuffleArray(categories).slice(
 		0,
 		Math.min(3, Math.max(2, Math.floor(maxRules / 2)))
 	);
 
-	const categoryRules = baseRules.filter((rule) =>
-		(selectedCategories as string[]).includes(rule.category)
-	);
+	const categoryRules = pool.filter((rule) => (selectedCategories as string[]).includes(rule.category));
 
-	const selectedRules: typeof baseRules = [];
+	const selectedRules: RuleTemplatePoolItem[] = [];
 	const usedCategories = new Set<string>();
 
 	while (selectedRules.length < maxRules && categoryRules.length > 0) {
@@ -168,6 +63,21 @@ export function selectRules(intoxicationLevel: number, maxRules: number = 5): ty
 	return selectedRules;
 }
 
+export async function selectRules(
+	intoxicationLevel: number,
+	maxRules: number = 5
+): Promise<RuleTemplatePoolItem[]> {
+	const rows = await db.select().from(ruleTemplates);
+	const pool: RuleTemplatePoolItem[] = rows.map((row) => ({
+		id: row.id,
+		text: row.text,
+		category: row.category as RuleTemplatePoolItem['category'],
+		weight: row.weight,
+		baseDrink: row.baseDrink
+	}));
+	return selectRulesFromPool(pool, intoxicationLevel, maxRules);
+}
+
 export function calculateEffectiveDrink(baseDrink: number, intoxicationLevel: number): number {
 	const effectiveDrink = baseDrink + intoxicationLevel;
 	return Math.min(effectiveDrink, DrinkEnum.Shot);
@@ -188,7 +98,12 @@ export function getDrinkName(drinkLevel: number): { name: string; icon: string }
 	}
 }
 
-export function generateRulesForVideo({
+export function substituteHostInRuleText(text: string, videoTitle: string): string {
+	const hostName = extractHostName(videoTitle) || 'the host';
+	return text.replace(/{host}/g, hostName);
+}
+
+export async function generateRulesForVideo({
 	videoTitle,
 	numberOfRules,
 	intoxicationLevel
@@ -198,11 +113,11 @@ export function generateRulesForVideo({
 	numberOfRules: number;
 	intoxicationLevel: number;
 }) {
-	const selectedRules = selectRules(intoxicationLevel, numberOfRules);
-	const hostName = extractHostName(videoTitle) || 'the host';
+	const selectedRules = await selectRules(intoxicationLevel, numberOfRules);
 
 	return selectedRules.map((rule) => ({
-		text: rule.text.replace(/{host}/g, hostName),
+		ruleTemplateId: rule.id,
+		text: substituteHostInRuleText(rule.text, videoTitle),
 		category: rule.category,
 		baseDrink: calculateEffectiveDrink(rule.baseDrink, intoxicationLevel - 1),
 		weight: rule.weight,

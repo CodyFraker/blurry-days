@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { z } from 'zod';
 import type { NewYoutubeVideo } from '@/lib/db/schema';
+import { getYoutubeThumbnailUrl } from '@/lib/youtube/thumbnailUrl';
 
 const RSS_FEED_URL =
 	'https://www.youtube.com/feeds/videos.xml?channel_id=UCx4MHIcTdwdcmJ5accSDlPA';
@@ -93,7 +94,7 @@ export function parseRss(xmlText: string, maxVideos: number = 100): NewYoutubeVi
 	const parsedData = RSSFeedSchema.parse({ feed: { entry: mappedEntries } });
 
 	const videos: NewYoutubeVideo[] = parsedData.feed.entry.slice(0, maxVideos).map((entry) => {
-		const thumbnail = entry['media:group']['media:thumbnail'];
+		const videoId = extractVideoId(entry.id);
 		const duration =
 			entry['yt:duration'] || entry['media:group']['media:content']?.duration;
 		const viewCount = entry['media:group']['media:community']?.['media:statistics']?.views;
@@ -111,10 +112,10 @@ export function parseRss(xmlText: string, maxVideos: number = 100): NewYoutubeVi
 		}
 
 		return {
-			id: extractVideoId(entry.id),
+			id: videoId,
 			title: entry['media:group']['media:title'],
 			description: enhancedDescription,
-			thumbnail: thumbnail?.url || '',
+			thumbnail: getYoutubeThumbnailUrl(videoId),
 			publishedAt: new Date(entry.published)
 		};
 	});

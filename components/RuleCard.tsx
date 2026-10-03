@@ -33,7 +33,9 @@ export function RuleCard({
 			}`}
 		>
 			{rule.isCustom && (
-				<span className="absolute right-4 top-4 rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-medium text-white">
+				<span
+					className="mb-2 inline-block rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-medium text-white max-sm:static sm:absolute sm:right-4 sm:top-4 sm:mb-0"
+				>
 					Custom
 				</span>
 			)}
@@ -47,7 +49,7 @@ export function RuleCard({
 				</span>
 			</div>
 			<p className="mb-4 text-gray-900 dark:text-gray-100">{rule.text}</p>
-			<div className="flex items-center justify-between gap-2">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<span className="rounded-full bg-gray-100 px-3 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
 					{categoryLabel(rule.category)}
 				</span>
