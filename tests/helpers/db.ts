@@ -1,13 +1,11 @@
 import postgres from 'postgres';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { resolveDatabaseUrl } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 
 export function getTestDb() {
-	const url =
-		process.env.DATABASE_URL_TEST ||
-		'postgres://grainydays:grainydays_dev@localhost:5432/grainydays_test';
-	const client = postgres(url);
+	const client = postgres(resolveDatabaseUrl());
 	return drizzle(client, { schema });
 }
 

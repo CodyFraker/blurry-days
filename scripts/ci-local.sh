@@ -40,7 +40,7 @@ npm ci
 npm run db:migrate
 DATABASE_URL="$DATABASE_URL_TEST" npm run db:migrate
 npm test
-RUN_INTEGRATION_TESTS=1 npm run test:integration
+DATABASE_URL="$DATABASE_URL_TEST" RUN_INTEGRATION_TESTS=1 npm run test:integration
 npm run lint
 npm run build
 

@@ -40,8 +40,10 @@ $env:DATABASE_URL = "postgres://grainydays:grainydays_dev@localhost:5432/grainyd
 
 npm test
 $env:RUN_INTEGRATION_TESTS = "1"
+$env:DATABASE_URL = $env:DATABASE_URL_TEST
 npm run test:integration
 Remove-Item Env:RUN_INTEGRATION_TESTS -ErrorAction SilentlyContinue
+$env:DATABASE_URL = "postgres://grainydays:grainydays_dev@localhost:5432/grainydays"
 
 npm run lint
 npm run build
