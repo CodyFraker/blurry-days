@@ -20,10 +20,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 					>
 						<h1 className="flex items-center justify-center gap-2 text-2xl font-bold tracking-tight hover:text-indigo-700 sm:justify-start dark:hover:text-indigo-300">
 							<LogoMark className="h-7 w-7 shrink-0 text-indigo-600 dark:text-indigo-400" />
-							Grainydays
+							blurrydays
 						</h1>
 						<p className="text-sm text-gray-500 max-sm:hidden dark:text-gray-400">
-							Drinking Game Generator
+							drinking game generator
 						</p>
 					</Link>
 					<nav
