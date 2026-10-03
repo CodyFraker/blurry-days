@@ -11,10 +11,10 @@ concurrency:
 env:
   AUTH_SECRET: ci-placeholder-auth-secret-min-32-chars!!
   AUTH_URL: http://localhost:3000
-  DISCORD_CLIENT_ID: "123456789012345678"
-  DISCORD_CLIENT_SECRET: ci-placeholder-discord-secret
   DATABASE_URL: postgres://grainydays:grainydays_dev@localhost:5432/grainydays
   DATABASE_URL_TEST: postgres://grainydays:grainydays_dev@localhost:5432/grainydays_test
+  CI_DISCORD_CLIENT_ID: "123456789012345678"
+  CI_DISCORD_CLIENT_SECRET: ci-placeholder-discord-secret
 
 jobs:
   test:
@@ -72,12 +72,23 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm run build
+      - name: Production build
+        env:
+          DISCORD_CLIENT_ID: ${{ env.CI_DISCORD_CLIENT_ID }}
+          DISCORD_CLIENT_SECRET: ${{ env.CI_DISCORD_CLIENT_SECRET }}
+        run: npm run build
 
   docker:
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
+
+    env:
+      AUTH_SECRET: ci-placeholder-auth-secret-min-32-chars!!
+      AUTH_URL: http://localhost:3000
+      DATABASE_URL: postgres://grainydays:grainydays_dev@localhost:5432/grainydays
+      DISCORD_CLIENT_ID: "123456789012345678"
+      DISCORD_CLIENT_SECRET: ci-placeholder-discord-secret
 
     permissions:
       contents: read

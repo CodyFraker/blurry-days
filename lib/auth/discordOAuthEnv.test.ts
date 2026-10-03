@@ -17,6 +17,8 @@ describe('readDiscordOAuthEnv', () => {
 	});
 
 	it('falls back to AUTH_DISCORD_ID and AUTH_DISCORD_SECRET', () => {
+		vi.stubEnv('DISCORD_CLIENT_ID', '');
+		vi.stubEnv('DISCORD_CLIENT_SECRET', '');
 		vi.stubEnv('AUTH_DISCORD_ID', '999888777666555444');
 		vi.stubEnv('AUTH_DISCORD_SECRET', 'auth-secret');
 
@@ -27,7 +29,10 @@ describe('readDiscordOAuthEnv', () => {
 	});
 
 	it('throws when client id is missing', () => {
+		vi.stubEnv('DISCORD_CLIENT_ID', '');
+		vi.stubEnv('AUTH_DISCORD_ID', '');
 		vi.stubEnv('DISCORD_CLIENT_SECRET', 'secret');
+		vi.stubEnv('AUTH_DISCORD_SECRET', '');
 
 		expect(() => readDiscordOAuthEnv()).toThrow(/DISCORD_CLIENT_ID/);
 	});
