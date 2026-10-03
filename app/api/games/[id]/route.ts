@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules } from '@/lib/db/schema';
-import { eq, and, gte } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { playableGameFilter } from '@/lib/games/gameVisibility';
 
+/**
+ * GET /api/games/[id]
+ * Returns a playable game and its rules by id.
+ */
 export async function GET(
 	_request: Request,
 	context: { params: Promise<{ id: string }> }
@@ -17,9 +22,7 @@ export async function GET(
 		const gameResult = await db
 			.select()
 			.from(games)
-			.where(
-				and(eq(games.id, id), eq(games.isActive, true), gte(games.expiresAt, new Date()))
-			)
+			.where(and(eq(games.id, id), playableGameFilter()))
 			.limit(1);
 
 		if (gameResult.length === 0) {
@@ -38,6 +41,7 @@ export async function GET(
 			game: {
 				id: game.id,
 				title: game.title,
+				videoId: game.videoId,
 				videoTitle: game.videoTitle,
 				videoThumbnail: game.videoThumbnail,
 				intoxicationLevel: game.intoxicationLevel,

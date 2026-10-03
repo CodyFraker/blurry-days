@@ -7,7 +7,8 @@ import {
 	substituteHostInRuleText
 } from '@/lib/rules/ruleEngine';
 import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
-import { eq, and, gte } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { playableGameFilter } from '@/lib/games/gameVisibility';
 
 export async function POST(
 	_request: Request,
@@ -24,7 +25,7 @@ export async function POST(
 			.select()
 			.from(games)
 			.where(
-				and(eq(games.id, id), eq(games.isActive, true), gte(games.expiresAt, new Date()))
+				and(eq(games.id, id), playableGameFilter())
 			)
 			.limit(1);
 

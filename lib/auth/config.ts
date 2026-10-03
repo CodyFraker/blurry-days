@@ -3,6 +3,9 @@ import Discord from 'next-auth/providers/discord';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@/lib/db';
 import { accounts, sessions, users, verificationTokens } from '@/lib/db/schema';
+import { readDiscordOAuthEnv } from '@/lib/auth/discordOAuthEnv';
+
+const discordOAuth = readDiscordOAuthEnv();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
 	secret: process.env.AUTH_SECRET,
@@ -14,8 +17,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 	}),
 	providers: [
 		Discord({
-			clientId: process.env.DISCORD_CLIENT_ID!,
-			clientSecret: process.env.DISCORD_CLIENT_SECRET!
+			clientId: discordOAuth.clientId,
+			clientSecret: discordOAuth.clientSecret
 		})
 	],
 	session: {

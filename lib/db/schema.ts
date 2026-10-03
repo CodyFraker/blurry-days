@@ -7,7 +7,8 @@ import {
 	doublePrecision,
 	boolean,
 	primaryKey,
-	smallint
+	smallint,
+	jsonb
 } from 'drizzle-orm/pg-core';
 import type { AdapterAccount } from 'next-auth/adapters';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
@@ -95,6 +96,7 @@ export const games = pgTable('games', {
 	userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	expiresAt: timestamp('expires_at').notNull(),
+	expiresNever: boolean('expires_never').default(false).notNull(),
 	isActive: boolean('is_active').default(true).notNull()
 });
 
@@ -116,6 +118,7 @@ export const ruleTemplates = pgTable('rule_templates', {
 	weight: doublePrecision('weight').notNull(),
 	baseDrink: integer('base_drink').notNull(),
 	usageCount: integer('usage_count').default(0).notNull(),
+	enabled: boolean('enabled').default(true).notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
@@ -161,7 +164,21 @@ export const youtubeVideos = pgTable('youtube_videos', {
 	thumbnail: text('thumbnail'),
 	publishedAt: timestamp('published_at').notNull(),
 	description: text('description'),
-	lastFetched: timestamp('last_fetched').defaultNow().notNull()
+	lastFetched: timestamp('last_fetched').defaultNow().notNull(),
+	isHidden: boolean('is_hidden').default(false).notNull(),
+	sortOrder: integer('sort_order')
+});
+
+export const adminAuditLog = pgTable('admin_audit_log', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	adminUserId: text('admin_user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	action: text('action').notNull(),
+	entityType: text('entity_type').notNull(),
+	entityId: text('entity_id').notNull(),
+	metadata: jsonb('metadata'),
+	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
 export const insertGameSchema = createInsertSchema(games);
@@ -174,6 +191,8 @@ export const insertRuleVoteSchema = createInsertSchema(ruleVotes);
 export const selectRuleVoteSchema = createSelectSchema(ruleVotes);
 export const insertYoutubeVideoSchema = createInsertSchema(youtubeVideos);
 export const selectYoutubeVideoSchema = createSelectSchema(youtubeVideos);
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog);
+export const selectAdminAuditLogSchema = createSelectSchema(adminAuditLog);
 
 export type Game = z.infer<typeof selectGameSchema>;
 export type NewGame = z.infer<typeof insertGameSchema>;
@@ -185,3 +204,5 @@ export type RuleVote = z.infer<typeof selectRuleVoteSchema>;
 export type NewRuleVote = z.infer<typeof insertRuleVoteSchema>;
 export type YoutubeVideo = z.infer<typeof selectYoutubeVideoSchema>;
 export type NewYoutubeVideo = z.infer<typeof insertYoutubeVideoSchema>;
+export type AdminAuditLog = z.infer<typeof selectAdminAuditLogSchema>;
+export type NewAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;

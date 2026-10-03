@@ -1,5 +1,9 @@
+import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { CategoryEnum, DrinkEnum, ruleTemplates } from '@/lib/db/schema';
+import { CategoryEnum, ruleTemplates } from '@/lib/db/schema';
+import { calculateEffectiveDrink } from '@/lib/rules/drinks';
+
+export { calculateEffectiveDrink, getDrinkName } from '@/lib/rules/drinks';
 
 export type RuleTemplatePoolItem = {
 	id: string;
@@ -67,7 +71,7 @@ export async function selectRules(
 	intoxicationLevel: number,
 	maxRules: number = 5
 ): Promise<RuleTemplatePoolItem[]> {
-	const rows = await db.select().from(ruleTemplates);
+	const rows = await db.select().from(ruleTemplates).where(eq(ruleTemplates.enabled, true));
 	const pool: RuleTemplatePoolItem[] = rows.map((row) => ({
 		id: row.id,
 		text: row.text,
@@ -76,26 +80,6 @@ export async function selectRules(
 		baseDrink: row.baseDrink
 	}));
 	return selectRulesFromPool(pool, intoxicationLevel, maxRules);
-}
-
-export function calculateEffectiveDrink(baseDrink: number, intoxicationLevel: number): number {
-	const effectiveDrink = baseDrink + intoxicationLevel;
-	return Math.min(effectiveDrink, DrinkEnum.Shot);
-}
-
-export function getDrinkName(drinkLevel: number): { name: string; icon: string } {
-	switch (drinkLevel) {
-		case DrinkEnum.Sip:
-			return { name: 'Sip', icon: '🥤' };
-		case DrinkEnum.Gulp:
-			return { name: 'Gulp', icon: '🥃' };
-		case DrinkEnum.Pull:
-			return { name: 'Pull', icon: '🍺' };
-		case DrinkEnum.Shot:
-			return { name: 'Shot', icon: '🥃' };
-		default:
-			return { name: 'Sip', icon: '🥤' };
-	}
 }
 
 export function substituteHostInRuleText(text: string, videoTitle: string): string {

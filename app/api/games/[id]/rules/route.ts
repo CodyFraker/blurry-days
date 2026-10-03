@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules, CategoryEnum, DrinkEnum } from '@/lib/db/schema';
 import { calculateEffectiveDrink } from '@/lib/rules/ruleEngine';
-import { eq, and, gte } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { playableGameFilter } from '@/lib/games/gameVisibility';
 
 export async function POST(
 	request: Request,
@@ -34,7 +35,7 @@ export async function POST(
 			.select()
 			.from(games)
 			.where(
-				and(eq(games.id, id), eq(games.isActive, true), gte(games.expiresAt, new Date()))
+				and(eq(games.id, id), playableGameFilter())
 			)
 			.limit(1);
 
@@ -104,7 +105,7 @@ export async function DELETE(
 			.select()
 			.from(games)
 			.where(
-				and(eq(games.id, id), eq(games.isActive, true), gte(games.expiresAt, new Date()))
+				and(eq(games.id, id), playableGameFilter())
 			)
 			.limit(1);
 

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AdminNavLink } from '@/components/AdminNavLink';
 import { AuthHeader } from '@/components/AuthHeader';
 
 const navLinkClass =
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 						<Link href="/my-games" className={navLinkClass}>
 							My games
 						</Link>
+						<AdminNavLink />
 						<AuthHeader />
 					</nav>
 				</div>

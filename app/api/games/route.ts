@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules } from '@/lib/db/schema';
+import { computeDefaultGameExpiresAt } from '@/lib/games/gameTtl';
 import { validateCreateGameBody } from '@/lib/games/validateCreateGame';
+import { assertRuleTemplatesUsable } from '@/lib/rules/assertTemplatesUsable';
 import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
 import { auth } from '@/lib/auth/config';
 import { eq } from 'drizzle-orm';
@@ -19,12 +21,19 @@ export async function POST(request: Request) {
 		const { title, videoId, videoTitle, videoThumbnail, intoxicationLevel, rules: gameRules } =
 			parsed.data;
 
+		const templateIds = gameRules
+			.filter((rule) => !rule.isCustom && rule.ruleTemplateId)
+			.map((rule) => rule.ruleTemplateId as string);
+		const templateCheck = await assertRuleTemplatesUsable(templateIds);
+		if (!templateCheck.ok) {
+			return NextResponse.json({ error: templateCheck.error }, { status: 400 });
+		}
+
 		const session = await auth();
 		const userId = session?.user?.id ?? null;
 
 		const gameId = uuidv4();
-		const expiresAt = new Date();
-		expiresAt.setDate(expiresAt.getDate() + 90);
+		const expiresAt = computeDefaultGameExpiresAt();
 
 		const newGame = await db
 			.insert(games)

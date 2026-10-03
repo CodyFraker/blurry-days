@@ -27,7 +27,7 @@ docker-compose up -d
 # Postgres: localhost:5432 (grainydays / grainydays_dev)
 ```
 
-The app container runs `next dev` with your repo bind-mounted for hot reload. If changes do not appear, recreate the app service (`docker compose up -d --build app`). On some hosts (often Docker Desktop on Windows), bind mounts do not emit file events into Linux containers; compose sets `WATCHPACK_POLLING=true` for the webpack dev watcher (this project uses webpack for `next dev`, not Turbopack). If hot reload already works without polling on your machine, remove or comment out that variable in `docker-compose.yml`, or override it in a local `docker-compose.override.yml`.
+The app container runs `next dev` with your repo bind-mounted for hot reload. OAuth and auth secrets (`AUTH_SECRET`, `DISCORD_*`, `ADMIN_DISCORD_IDS`) are read from `.env` or `.env.local` in the project root—do not set them to empty values in `docker-compose.yml`, or they override the mounted env files. If changes do not appear, recreate the app service (`docker compose up -d --build app`). On some hosts (often Docker Desktop on Windows), bind mounts do not emit file events into Linux containers; compose sets `WATCHPACK_POLLING=true` for the webpack dev watcher (this project uses webpack for `next dev`, not Turbopack). If hot reload already works without polling on your machine, remove or comment out that variable in `docker-compose.yml`, or override it in a local `docker-compose.override.yml`.
 
 Run migrations after Postgres is up:
 
@@ -62,8 +62,17 @@ npm run dev
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `AUTH_URL` | App URL (e.g. `http://localhost:3000`) |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | Discord OAuth |
+| `ADMIN_DISCORD_IDS` | Comma-separated Discord user IDs (snowflakes) allowed to access `/admin`. Empty disables admin access. Find your ID via Discord Developer Mode or the `account.providerAccountId` row after signing in once. |
+| `GAME_TTL_DAYS` | Default days until new games expire (default `90`) |
+| `VIDEO_SYNC_CACHE_MINUTES` | Minutes before `/api/videos` refreshes YouTube RSS (default `60`) |
 
 Health check: `GET /api/health`
+
+Admin UI: `/admin` (Rules, Games, Videos, Votes, System) — requires signed-in admin.
+
+Admin session check: `GET /api/admin/me` (requires signed-in admin)
+
+Admin APIs (all require admin session): `GET/POST /api/admin/rule-templates`, `GET/PATCH/DELETE /api/admin/rule-templates/:id`, `GET /api/admin/games`, `GET/PATCH/DELETE /api/admin/games/:id`, `GET/POST /api/admin/videos`, `POST /api/admin/videos/sync`, `GET/PATCH/DELETE /api/admin/videos/:id`, `GET/DELETE /api/admin/rule-votes`, `GET/DELETE /api/admin/rule-templates/:id/votes`, `GET /api/admin/dashboard`, `GET /api/admin/audit-log`, `GET /api/admin/system/checks`
 
 Rules catalog API: `GET /api/rules?page=1&pageSize=25`
 

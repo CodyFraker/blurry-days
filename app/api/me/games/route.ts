@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth/requireSession';
 import { db } from '@/lib/db';
 import { games } from '@/lib/db/schema';
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
+import { playableGameFilter } from '@/lib/games/gameVisibility';
 
 export async function GET() {
 	const sessionResult = await requireSession();
@@ -23,13 +24,7 @@ export async function GET() {
 			expiresAt: games.expiresAt
 		})
 		.from(games)
-		.where(
-			and(
-				eq(games.userId, user.id),
-				eq(games.isActive, true),
-				gte(games.expiresAt, new Date())
-			)
-		)
+		.where(and(eq(games.userId, user.id), playableGameFilter()))
 		.orderBy(desc(games.createdAt));
 
 	return NextResponse.json({ games: userGames });

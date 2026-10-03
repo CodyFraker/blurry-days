@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { YoutubeVideo } from '@/lib/db/schema';
 import { CategoryEnum, DrinkEnum } from '@/lib/db/schema';
-import { getDrinkName } from '@/lib/rules/ruleEngine';
+import { getDrinkName } from '@/lib/rules/drinks';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { GameSummaryStickyActions } from '@/components/GameSummaryStickyActions';

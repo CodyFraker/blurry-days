@@ -1,4 +1,4 @@
-import { desc, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { ruleTemplates, ruleVotes } from '@/lib/db/schema';
@@ -87,13 +87,15 @@ export async function listRuleTemplates(query: ListRulesQuery): Promise<ListRule
 			)`.mapWith(Number)
 		})
 		.from(ruleTemplates)
+		.where(eq(ruleTemplates.enabled, true))
 		.orderBy(desc(ruleTemplates.createdAt))
 		.limit(query.limit)
 		.offset(query.offset);
 
 	const countResult = await db
 		.select({ total: sql<number>`count(*)::int` })
-		.from(ruleTemplates);
+		.from(ruleTemplates)
+		.where(eq(ruleTemplates.enabled, true));
 
 	const total = countResult[0]?.total ?? 0;
 	const totalPages = total === 0 ? 0 : Math.ceil(total / query.pageSize);

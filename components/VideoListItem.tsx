@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { YoutubeVideo } from '@/lib/db/schema';
 import {
@@ -7,7 +8,8 @@ import {
 	getYoutubeThumbnailUrl
 } from '@/lib/youtube/thumbnailUrl';
 import {
-	formatVideoMetaSegments,
+	formatGameCountLabel,
+	formatVideoStatsSegments,
 	parseVideoDescriptionExtras
 } from '@/lib/youtube/videoDescriptionExtras';
 
@@ -54,11 +56,8 @@ export function VideoListItem({
 	const thumbSrc = fallbackUrls[thumbIndex] ?? getYoutubeThumbnailUrl(video.id);
 
 	const extras = parseVideoDescriptionExtras(video.description);
-	const metaLine = formatVideoMetaSegments(
-		new Date(video.publishedAt),
-		video.gameCount,
-		extras
-	).join(' · ');
+	const publishedLabel = new Date(video.publishedAt).toLocaleDateString();
+	const metaTail = formatVideoStatsSegments(extras);
 
 	function onThumbError() {
 		setThumbIndex((i) => (i < fallbackUrls.length - 1 ? i + 1 : i));
@@ -81,7 +80,17 @@ export function VideoListItem({
 				<h3 className="line-clamp-1 text-base font-semibold text-gray-900 dark:text-gray-50">
 					{video.title}
 				</h3>
-				<p className="mt-0.5 line-clamp-1 text-sm text-gray-500 dark:text-gray-400">{metaLine}</p>
+				<p className="mt-0.5 line-clamp-1 text-sm text-gray-500 dark:text-gray-400">
+					{publishedLabel}
+					{' · '}
+					<Link
+						href={`/videos/${encodeURIComponent(video.id)}/games`}
+						className="text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+					>
+						{formatGameCountLabel(video.gameCount)}
+					</Link>
+					{metaTail.length > 0 ? ` · ${metaTail.join(' · ')}` : ''}
+				</p>
 			</div>
 			<button
 				type="button"

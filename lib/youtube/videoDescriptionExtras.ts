@@ -33,13 +33,12 @@ export function parseVideoDescriptionExtras(
 	return extras;
 }
 
-export function formatVideoMetaSegments(
-	publishedAt: Date,
-	gameCount: number,
-	extras: VideoDescriptionExtras
-): string[] {
-	const segments: string[] = [publishedAt.toLocaleDateString()];
-	segments.push(`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`);
+export function formatGameCountLabel(gameCount: number): string {
+	return `${gameCount} ${gameCount === 1 ? 'game' : 'games'}`;
+}
+
+export function formatVideoStatsSegments(extras: VideoDescriptionExtras): string[] {
+	const segments: string[] = [];
 	if (extras.duration) {
 		segments.push(extras.duration);
 	}
@@ -47,4 +46,14 @@ export function formatVideoMetaSegments(
 		segments.push(`${extras.views} views`);
 	}
 	return segments;
+}
+
+export function formatVideoMetaSegments(
+	publishedAt: Date,
+	gameCount: number,
+	extras: VideoDescriptionExtras
+): string[] {
+	const segments: string[] = [publishedAt.toLocaleDateString()];
+	segments.push(formatGameCountLabel(gameCount));
+	return segments.concat(formatVideoStatsSegments(extras));
 }

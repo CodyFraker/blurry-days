@@ -89,4 +89,34 @@ describe.skipIf(!hasTestDb)('rule catalog', () => {
 		expect(row?.thumbsUp).toBe(2);
 		expect(row?.thumbsDown).toBe(1);
 	});
+
+	it('omits disabled templates from public catalog', async () => {
+		const [enabled] = await db
+			.insert(ruleTemplates)
+			.values({
+				text: 'Enabled rule',
+				category: CategoryEnum.General,
+				weight: 1,
+				baseDrink: DrinkEnum.Sip,
+				enabled: true
+			})
+			.returning();
+		await db.insert(ruleTemplates).values({
+			text: 'Disabled rule',
+			category: CategoryEnum.General,
+			weight: 1,
+			baseDrink: DrinkEnum.Sip,
+			enabled: false
+		});
+
+		const result = await listRuleTemplates({
+			page: 1,
+			pageSize: 25,
+			offset: 0,
+			limit: 25
+		});
+
+		expect(result.rules.some((r) => r.id === enabled.id)).toBe(true);
+		expect(result.rules.some((r) => r.text === 'Disabled rule')).toBe(false);
+	});
 });

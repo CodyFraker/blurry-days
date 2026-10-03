@@ -1,4 +1,4 @@
-import { getDrinkName } from '@/lib/rules/ruleEngine';
+import { getDrinkName } from '@/lib/rules/drinks';
 
 export type RuleView = {
 	id: string;
@@ -7,6 +7,7 @@ export type RuleView = {
 	baseDrink: number;
 	order?: number;
 	isCustom?: boolean;
+	ruleTemplateId?: string | null;
 };
 
 function categoryLabel(category: string) {

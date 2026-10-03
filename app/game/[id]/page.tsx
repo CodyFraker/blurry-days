@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { RuleCard, type RuleView } from '@/components/RuleCard';
+import { getYoutubeWatchUrl } from '@/lib/youtube/watchUrl';
 
 type Game = {
 	id: string;
 	title: string;
+	videoId: string;
 	videoTitle: string;
 	videoThumbnail: string;
 	intoxicationLevel: number;
@@ -89,13 +91,23 @@ export default function GamePage() {
 					</div>
 				</div>
 				<div className="text-center lg:text-right">
-					<button
-						type="button"
-						onClick={copyShareLink}
-						className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
-					>
-						{copied ? '✅ Copied!' : '📋 Share Game'}
-					</button>
+					<div className="flex flex-col gap-2 sm:items-end">
+						<a
+							href={getYoutubeWatchUrl(game.videoId)}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto dark:bg-blue-500 dark:hover:bg-blue-600"
+						>
+							▶️ Watch Video
+						</a>
+						<button
+							type="button"
+							onClick={copyShareLink}
+							className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50 sm:w-auto dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+						>
+							{copied ? '✅ Copied!' : '📋 Share Game'}
+						</button>
+					</div>
 					<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
 						Share this link with your friends to play together!
 					</p>

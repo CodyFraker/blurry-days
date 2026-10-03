@@ -1,6 +1,21 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { VideoListItem } from './VideoListItem';
+
+vi.mock('next/link', () => ({
+	default: ({
+		children,
+		href,
+		...props
+	}: {
+		children: React.ReactNode;
+		href: string;
+	}) => (
+		<a href={href} {...props}>
+			{children}
+		</a>
+	)
+}));
 import { YOUTUBE_THUMBNAIL_HOST } from '@/lib/youtube/thumbnailUrl';
 
 const video = {
@@ -22,7 +37,8 @@ describe('VideoListItem', () => {
 		render(<VideoListItem video={video} onCreateGame={vi.fn()} />);
 
 		expect(screen.getByText('Test Video')).toBeInTheDocument();
-		expect(screen.getByText(/2 games/)).toBeInTheDocument();
+		const gamesLink = screen.getByRole('link', { name: '2 games' });
+		expect(gamesLink).toHaveAttribute('href', '/videos/v1/games');
 		expect(screen.getByText(/10:00/)).toBeInTheDocument();
 		expect(screen.getByText(/1,234 views/)).toBeInTheDocument();
 		expect(

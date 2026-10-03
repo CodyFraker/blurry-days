@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { NewYoutubeVideo } from '@/lib/db/schema';
 import { getYoutubeThumbnailUrl } from '@/lib/youtube/thumbnailUrl';
 
-const RSS_FEED_URL =
+export const RSS_FEED_URL =
 	'https://www.youtube.com/feeds/videos.xml?channel_id=UCx4MHIcTdwdcmJ5accSDlPA';
 
 const RSSItemSchema = z.object({

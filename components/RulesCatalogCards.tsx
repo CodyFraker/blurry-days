@@ -1,5 +1,5 @@
 import type { RuleTemplateListItem } from '@/lib/rules/ruleCatalog';
-import { getDrinkName } from '@/lib/rules/ruleEngine';
+import { getDrinkName } from '@/lib/rules/drinks';
 
 function categoryLabel(category: string) {
 	return category.charAt(0).toUpperCase() + category.slice(1);
