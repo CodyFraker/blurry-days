@@ -10,6 +10,7 @@ yarn-error.log*
 build/
 dist/
 out/
+productionStartup.js
 
 # Environment variables
 .env

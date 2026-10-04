@@ -8,29 +8,14 @@ export async function register() {
 	}
 
 	try {
-		const { ensureDatabase } = await import('./lib/db/ensureDatabase');
-		await ensureDatabase();
+		const startupModulePath = `${process.cwd()}/productionStartup.js`;
+		const { runProductionDatabaseStartup } = await import(
+			/* webpackIgnore: true */
+			startupModulePath
+		);
+		await runProductionDatabaseStartup();
 	} catch (error) {
-		console.error('[startup] ensuring database failed:', error);
+		console.error('[startup] database startup failed:', error);
 		process.exit(1);
 	}
-
-	try {
-		const { applyMigrations } = await import('./lib/db/applyMigrations');
-		await applyMigrations();
-	} catch (error) {
-		console.error('[startup] applying migrations failed:', error);
-		process.exit(1);
-	}
-
-	try {
-		const { assertDatabaseConnection } = await import('./lib/db/assertDatabaseConnection');
-		await assertDatabaseConnection();
-	} catch (error) {
-		console.error('[startup] database connection failed:', error);
-		process.exit(1);
-	}
-
-	// Scheduled jobs (e.g. legacy Sheets sync) belong in a separate worker or
-	// external cron hitting API routes — importing googleapis here breaks Next dev.
 }

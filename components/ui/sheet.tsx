@@ -27,6 +27,7 @@ function SheetOverlay({
 }: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
 	return (
 		<SheetPrimitive.Overlay
+			data-slot="draggable-bottom-sheet-overlay"
 			className={cn('fixed inset-0 z-50 bg-black/50', className)}
 			{...props}
 		/>
@@ -45,8 +46,11 @@ function SheetContent({
 		<SheetPortal>
 			<SheetOverlay />
 			<SheetPrimitive.Content
+				data-slot={side === 'bottom' ? 'draggable-bottom-sheet-content' : undefined}
 				className={cn(
-					'fixed z-50 flex flex-col gap-4 border border-border bg-card shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+					'fixed z-50 flex flex-col gap-4 border border-border bg-card shadow-lg',
+					side !== 'bottom' &&
+						'transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
 					side === 'bottom' &&
 						'inset-x-0 bottom-0 max-h-[min(92dvh,900px)] rounded-t-xl border-b-0 pb-[max(1rem,env(safe-area-inset-bottom))]',
 					side === 'top' && 'inset-x-0 top-0 max-h-[92dvh] rounded-b-xl border-t-0',

@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import type { AdminRuleRow } from '@/components/admin/AdminRulesTable';
+import { RuleTemplateFormFields } from '@/components/admin/RuleTemplateFormFields';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
 	Sheet,
 	SheetContent,
@@ -13,46 +12,13 @@ import {
 	SheetHeader,
 	SheetTitle
 } from '@/components/ui/sheet';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import {
-	nativeSelectClassName,
-	ruleCategories,
-	ruleDrinkOptions,
-	type RuleCategory,
-	type RuleTemplateFormValues
-} from '@/lib/admin/ruleTemplates/ruleFormConstants';
+	formToPayload,
+	ruleToFormValues,
+	type RuleTemplatePayload
+} from '@/lib/admin/ruleTemplates/ruleTemplateForm';
 
-export type RuleTemplateUpdatePayload = {
-	text: string;
-	category: RuleCategory;
-	weight: number;
-	baseDrink: number;
-	enabled: boolean;
-	description: string | null;
-};
-
-function ruleToFormValues(rule: AdminRuleRow): RuleTemplateFormValues {
-	return {
-		text: rule.text,
-		description: rule.description ?? '',
-		category: rule.category as RuleCategory,
-		weight: rule.weight,
-		baseDrink: rule.baseDrink,
-		enabled: rule.enabled
-	};
-}
-
-function formToPayload(values: RuleTemplateFormValues): RuleTemplateUpdatePayload {
-	return {
-		text: values.text.trim(),
-		category: values.category,
-		weight: values.weight,
-		baseDrink: values.baseDrink,
-		enabled: values.enabled,
-		description: values.description.trim() === '' ? null : values.description
-	};
-}
+export type RuleTemplateUpdatePayload = RuleTemplatePayload;
 
 type AdminRuleEditSheetProps = {
 	rule: AdminRuleRow | null;
@@ -92,80 +58,8 @@ function RuleEditForm({ rule, onSave, saving, onOpenChange }: RuleEditFormProps)
 
 	return (
 		<>
-			<form id="admin-rule-edit-form" onSubmit={handleSubmit} className="space-y-4 px-4">
-				<div className="space-y-2">
-					<Label htmlFor="edit-rule-text">Rule text</Label>
-					<Textarea
-						id="edit-rule-text"
-						rows={3}
-						value={form.text}
-						onChange={(e) => setForm({ ...form, text: e.target.value })}
-						required
-						placeholder="Use {host} for the host name"
-					/>
-				</div>
-				<div className="space-y-2">
-					<Label htmlFor="edit-rule-guidance">Player guidance</Label>
-					<Textarea
-						id="edit-rule-guidance"
-						rows={3}
-						value={form.description}
-						onChange={(e) => setForm({ ...form, description: e.target.value })}
-						placeholder="Optional guidance for edge cases"
-					/>
-				</div>
-				<div className="grid gap-4 sm:grid-cols-2">
-					<div className="space-y-2">
-						<Label htmlFor="edit-rule-category">Category</Label>
-						<select
-							id="edit-rule-category"
-							className={nativeSelectClassName}
-							value={form.category}
-							onChange={(e) => setForm({ ...form, category: e.target.value as RuleCategory })}
-						>
-							{ruleCategories.map((c) => (
-								<option key={c} value={c}>
-									{c}
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="edit-rule-drink">Drink</Label>
-						<select
-							id="edit-rule-drink"
-							className={nativeSelectClassName}
-							value={form.baseDrink}
-							onChange={(e) => setForm({ ...form, baseDrink: Number(e.target.value) })}
-						>
-							{ruleDrinkOptions.map((d) => (
-								<option key={d.value} value={d.value}>
-									{d.label}
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="edit-rule-weight">Weight</Label>
-						<Input
-							id="edit-rule-weight"
-							type="number"
-							step="0.1"
-							min="0.1"
-							value={form.weight}
-							onChange={(e) => setForm({ ...form, weight: Number(e.target.value) })}
-							required
-						/>
-					</div>
-					<div className="flex items-end gap-3 pb-1">
-						<Switch
-							id="edit-rule-enabled"
-							checked={form.enabled}
-							onCheckedChange={(enabled) => setForm({ ...form, enabled })}
-						/>
-						<Label htmlFor="edit-rule-enabled">Enabled in catalog</Label>
-					</div>
-				</div>
+			<form id="admin-rule-edit-form" onSubmit={handleSubmit} className="px-4">
+				<RuleTemplateFormFields idPrefix="edit" form={form} onChange={setForm} />
 			</form>
 			<SheetFooter>
 				<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

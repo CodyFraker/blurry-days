@@ -99,6 +99,20 @@ describe('Rule Engine', () => {
 			expect(rules2.length).toBeGreaterThan(0);
 			expect(rules2.length).toBeLessThanOrEqual(3);
 		});
+
+		it('returns the requested count when the pool is smaller than maxRules', () => {
+			const rules = selectRulesFromPool(testPool, 3, 12);
+
+			expect(rules.length).toBe(12);
+		});
+
+		it('uses every category for larger games', () => {
+			const rules = selectRulesFromPool(testPool, 3, 10);
+			const categories = new Set(rules.map((rule) => rule.category));
+
+			expect(rules.length).toBe(10);
+			expect(categories.size).toBeGreaterThan(2);
+		});
 	});
 
 	describe('calculateEffectiveDrink', () => {

@@ -13,16 +13,37 @@ export type RuleTemplatePoolItem = {
 	baseDrink: number;
 };
 
+function pickWeightedRule(candidates: RuleTemplatePoolItem[]): RuleTemplatePoolItem {
+	const totalWeight = candidates.reduce((sum, rule) => sum + rule.weight, 0);
+	let random = Math.random() * totalWeight;
+	let selectedIndex = candidates.length - 1;
+
+	for (let i = 0; i < candidates.length; i++) {
+		random -= candidates[i].weight;
+		if (random <= 0) {
+			selectedIndex = i;
+			break;
+		}
+	}
+
+	return candidates[selectedIndex];
+}
+
 export function selectRulesFromPool(
 	pool: RuleTemplatePoolItem[],
 	_intoxicationLevel: number,
 	maxRules: number = 5
 ): RuleTemplatePoolItem[] {
+	if (pool.length === 0 || maxRules <= 0) {
+		return [];
+	}
+
 	const categories = Object.values(CategoryEnum) as (typeof CategoryEnum)[keyof typeof CategoryEnum][];
-	const selectedCategories = shuffleArray(categories).slice(
-		0,
-		Math.min(3, Math.max(2, Math.floor(maxRules / 2)))
-	);
+	const selectedCategoryCount =
+		maxRules <= 5
+			? Math.min(3, Math.max(2, Math.floor(maxRules / 2)))
+			: categories.length;
+	const selectedCategories = shuffleArray(categories).slice(0, selectedCategoryCount);
 
 	const categoryRules = pool.filter((rule) => (selectedCategories as string[]).includes(rule.category));
 
@@ -30,27 +51,11 @@ export function selectRulesFromPool(
 	const usedCategories = new Set<string>();
 
 	while (selectedRules.length < maxRules && categoryRules.length > 0) {
-		const totalWeight = categoryRules.reduce((sum, rule) => sum + rule.weight, 0);
-
-		let random = Math.random() * totalWeight;
-		let selectedIndex = -1;
-
-		for (let i = 0; i < categoryRules.length; i++) {
-			random -= categoryRules[i].weight;
-			if (random <= 0) {
-				selectedIndex = i;
-				break;
-			}
-		}
-
-		if (selectedIndex === -1) {
-			selectedIndex = categoryRules.length - 1;
-		}
-
-		const selectedRule = categoryRules[selectedIndex];
+		const selectedRule = pickWeightedRule(categoryRules);
 		selectedRules.push(selectedRule);
 		usedCategories.add(selectedRule.category);
 
+		const selectedIndex = categoryRules.indexOf(selectedRule);
 		categoryRules.splice(selectedIndex, 1);
 
 		if (usedCategories.size >= 2) {
@@ -62,6 +67,10 @@ export function selectRulesFromPool(
 		const randomIndex = Math.floor(Math.random() * categoryRules.length);
 		selectedRules.push(categoryRules[randomIndex]);
 		categoryRules.splice(randomIndex, 1);
+	}
+
+	while (selectedRules.length < maxRules) {
+		selectedRules.push(pickWeightedRule(pool));
 	}
 
 	return selectedRules;
