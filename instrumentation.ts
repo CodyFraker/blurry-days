@@ -14,6 +14,8 @@ export async function register() {
 			startupModulePath
 		);
 		await runProductionDatabaseStartup();
+		const { scheduleVideoSyncIfConfigured } = await import('@/lib/youtube/scheduleVideoSync');
+		scheduleVideoSyncIfConfigured();
 	} catch (error) {
 		console.error('[startup] database startup failed:', error);
 		process.exit(1);

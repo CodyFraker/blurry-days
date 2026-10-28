@@ -64,9 +64,12 @@ npm run dev
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | Discord OAuth |
 | `ADMIN_DISCORD_IDS` | Comma-separated Discord user IDs (snowflakes) allowed to access `/admin`. Empty disables admin access. Find your ID via Discord Developer Mode or the `account.providerAccountId` row after signing in once. |
 | `GAME_TTL_DAYS` | Default days until new games expire (default `90`) |
-| `VIDEO_SYNC_CACHE_MINUTES` | Minutes before `/api/videos` refreshes YouTube RSS (default `60`) |
+| `VIDEO_SYNC_CACHE_MINUTES` | Minutes before a scheduled or admin sync re-fetches YouTube RSS (default `60`) |
+| `VIDEO_SYNC_CRON` | Optional cron expression for background YouTube sync in production (e.g. `0 * * * *`). Public `GET /api/videos` reads the database only. |
 
-Health check: `GET /api/health`
+Health check: `GET /api/health` returns `{ status: 'ok' }`. Set `HEALTH_CHECK_SECRET` and send `Authorization: Bearer <secret>` for database detail.
+
+Security notes: see [docs/SECURITY-FINDINGS.md](docs/SECURITY-FINDINGS.md).
 
 Admin UI: `/admin` (Rules, Games, Videos, Votes, System) — requires signed-in admin.
 

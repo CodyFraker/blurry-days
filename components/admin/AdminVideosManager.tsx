@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { adminFetch } from '@/lib/admin/adminFetch';
 
 type AdminVideo = {
 	id: string;
@@ -37,7 +38,7 @@ export function AdminVideosManager() {
 	}, [load]);
 
 	async function forceSync() {
-		const res = await fetch('/api/admin/videos/sync', { method: 'POST' });
+		const res = await adminFetch('/api/admin/videos/sync', { method: 'POST' });
 		if (!res.ok) {
 			setError('Sync failed');
 			return;
@@ -46,7 +47,7 @@ export function AdminVideosManager() {
 	}
 
 	async function toggleHidden(video: AdminVideo) {
-		const res = await fetch(`/api/admin/videos/${video.id}`, {
+		const res = await adminFetch(`/api/admin/videos/${video.id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ isHidden: !video.isHidden })
@@ -62,7 +63,7 @@ export function AdminVideosManager() {
 		if (!window.confirm(`Delete video ${video.title}?`)) {
 			return;
 		}
-		const res = await fetch(`/api/admin/videos/${video.id}`, { method: 'DELETE' });
+		const res = await adminFetch(`/api/admin/videos/${video.id}`, { method: 'DELETE' });
 		if (res.status === 409) {
 			setError('Cannot delete: games use this video');
 			return;
@@ -76,7 +77,7 @@ export function AdminVideosManager() {
 
 	async function addManual(e: React.FormEvent) {
 		e.preventDefault();
-		const res = await fetch('/api/admin/videos', {
+		const res = await adminFetch('/api/admin/videos', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({

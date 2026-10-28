@@ -7,6 +7,10 @@ vi.mock('@/lib/auth/requireAdmin', () => ({
 	requireAdmin: () => requireAdmin()
 }));
 
+vi.mock('@/lib/admin/requireAdminMutation', () => ({
+	requireAdminMutation: () => requireAdmin()
+}));
+
 vi.mock('@/lib/youtube/syncChannelVideos', () => ({
 	syncChannelVideos: vi.fn().mockResolvedValue({
 		videos: [],
@@ -29,7 +33,7 @@ describe('POST /api/admin/videos/sync', () => {
 			response: new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
 		});
 
-		const response = await POST();
+		const response = await POST(new Request('http://localhost/api/admin/videos/sync', { method: 'POST' }));
 
 		expect(response.status).toBe(403);
 	});

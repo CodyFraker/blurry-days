@@ -6,6 +6,7 @@ import {
 } from '@/lib/admin/ruleTemplates/schemas';
 import { listAdminRuleTemplates } from '@/lib/admin/ruleTemplates/ruleTemplateAdmin';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { db } from '@/lib/db';
 import { ruleTemplates } from '@/lib/db/schema';
 import { parseListRulesQuery } from '@/lib/rules/ruleCatalog';
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
  * - 201 — created rule
  */
 export async function POST(request: Request) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

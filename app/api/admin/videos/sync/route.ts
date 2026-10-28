@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { recordAdminAction } from '@/lib/admin/auditLog';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { syncChannelVideos } from '@/lib/youtube/syncChannelVideos';
 
 /**
@@ -8,8 +8,8 @@ import { syncChannelVideos } from '@/lib/youtube/syncChannelVideos';
  *
  * Force YouTube RSS sync (bypass cache).
  */
-export async function POST() {
-	const adminResult = await requireAdmin();
+export async function POST(request: Request) {
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

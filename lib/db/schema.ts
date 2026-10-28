@@ -81,6 +81,7 @@ export const games = pgTable('games', {
 	videoThumbnail: text('video_thumbnail'),
 	intoxicationLevel: integer('intoxication_level').notNull(),
 	userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+	editTokenHash: text('edit_token_hash'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	expiresAt: timestamp('expires_at').notNull(),
 	expiresNever: boolean('expires_never').default(false).notNull(),

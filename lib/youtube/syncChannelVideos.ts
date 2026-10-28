@@ -70,6 +70,10 @@ async function queryVideos(options: {
 	}));
 }
 
+export async function listPublicVideos(now?: Date): Promise<VideoWithGameCount[]> {
+	return queryVideos({ includeHidden: false, now });
+}
+
 export async function syncChannelVideos(options: {
 	force?: boolean;
 	includeHidden?: boolean;

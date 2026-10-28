@@ -7,6 +7,10 @@ vi.mock('@/lib/auth/requireAdmin', () => ({
 	requireAdmin: () => requireAdmin()
 }));
 
+vi.mock('@/lib/admin/requireAdminMutation', () => ({
+	requireAdminMutation: () => requireAdmin()
+}));
+
 vi.mock('@/lib/admin/votes/listRuleVoteLeaderboard', () => ({
 	listRuleVoteLeaderboard: vi.fn().mockResolvedValue([])
 }));

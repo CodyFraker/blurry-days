@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { adminFetch } from '@/lib/admin/adminFetch';
 
 type AdminGame = {
 	id: string;
@@ -56,7 +57,7 @@ export function AdminGamesManager() {
 	}
 
 	async function patchGame(id: string, body: Record<string, unknown>) {
-		const res = await fetch(`/api/admin/games/${id}`, {
+		const res = await adminFetch(`/api/admin/games/${id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body)
@@ -75,7 +76,7 @@ export function AdminGamesManager() {
 		if (!window.confirm('Delete this game permanently?')) {
 			return;
 		}
-		const res = await fetch(`/api/admin/games/${id}`, { method: 'DELETE' });
+		const res = await adminFetch(`/api/admin/games/${id}`, { method: 'DELETE' });
 		if (!res.ok && res.status !== 204) {
 			setError('Delete failed');
 			return;

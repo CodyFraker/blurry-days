@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { nativeSelectClassName, ruleCategories } from '@/lib/admin/ruleTemplates/ruleFormConstants';
 import type { RuleTemplatePayload } from '@/lib/admin/ruleTemplates/ruleTemplateForm';
 import { cn } from '@/lib/utils';
+import { adminFetch } from '@/lib/admin/adminFetch';
 
 const FETCH_PAGE_SIZE = 100;
 const TABLE_PAGE_SIZE = 25;
@@ -150,7 +151,7 @@ export function AdminRulesManager() {
 	async function createRule(payload: RuleTemplatePayload, _addAnother: boolean): Promise<boolean> {
 		setError(null);
 		setSavingCreate(true);
-		const res = await fetch('/api/admin/rule-templates', {
+		const res = await adminFetch('/api/admin/rule-templates', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -185,7 +186,7 @@ export function AdminRulesManager() {
 		if (editingRule?.id === rule.id) {
 			setEditingRule((r) => (r ? { ...r, enabled: next } : r));
 		}
-		const res = await fetch(`/api/admin/rule-templates/${rule.id}`, {
+		const res = await adminFetch(`/api/admin/rule-templates/${rule.id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ enabled: next })
@@ -204,7 +205,7 @@ export function AdminRulesManager() {
 	async function saveRuleEdit(ruleId: string, payload: RuleTemplateUpdatePayload) {
 		setError(null);
 		setSavingEdit(true);
-		const res = await fetch(`/api/admin/rule-templates/${ruleId}`, {
+		const res = await adminFetch(`/api/admin/rule-templates/${ruleId}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(payload)
@@ -248,7 +249,7 @@ export function AdminRulesManager() {
 
 	async function deleteRule(id: string) {
 		setError(null);
-		const res = await fetch(`/api/admin/rule-templates/${id}`, { method: 'DELETE' });
+		const res = await adminFetch(`/api/admin/rule-templates/${id}`, { method: 'DELETE' });
 		if (!res.ok && res.status !== 204) {
 			setError('Delete failed');
 			return;

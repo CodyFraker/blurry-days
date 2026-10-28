@@ -2,24 +2,40 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { games, rules } from '@/lib/db/schema';
 import { computeDefaultGameExpiresAt } from '@/lib/games/gameTtl';
+import { generateEditToken } from '@/lib/games/editToken';
 import { validateCreateGameBody } from '@/lib/games/validateCreateGame';
 import { assertRuleTemplatesUsable } from '@/lib/rules/assertTemplatesUsable';
 import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
 import { auth } from '@/lib/auth/config';
+import { getClientIp, rateLimitOrResponse } from '@/lib/security/rateLimit';
+import { getYoutubeThumbnailUrl } from '@/lib/youtube/thumbnailUrl';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
+const CREATE_GAME_LIMIT = 10;
+const CREATE_GAME_WINDOW_MS = 60_000;
+
 export async function POST(request: Request) {
 	try {
+		const limited = rateLimitOrResponse(request, {
+			key: `games:create:${getClientIp(request)}`,
+			limit: CREATE_GAME_LIMIT,
+			windowMs: CREATE_GAME_WINDOW_MS
+		});
+		if (limited) {
+			return limited;
+		}
+
 		const body = await request.json();
 		const parsed = validateCreateGameBody(body);
 
 		if (!parsed.success) {
-			return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+			return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
 		}
 
-		const { title, videoId, videoTitle, videoThumbnail, intoxicationLevel, rules: gameRules } =
+		const { title, videoId, videoTitle, intoxicationLevel, rules: gameRules } =
 			parsed.data;
+		const videoThumbnail = getYoutubeThumbnailUrl(videoId);
 
 		const templateIds = gameRules
 			.filter((rule) => !rule.isCustom && rule.ruleTemplateId)
@@ -34,6 +50,7 @@ export async function POST(request: Request) {
 
 		const gameId = uuidv4();
 		const expiresAt = computeDefaultGameExpiresAt();
+		const { token: editToken, hash: editTokenHash } = generateEditToken();
 
 		const newGame = await db
 			.insert(games)
@@ -42,9 +59,10 @@ export async function POST(request: Request) {
 				title: title || `${videoTitle} Drinking Game`,
 				videoId,
 				videoTitle,
-				videoThumbnail: videoThumbnail ?? null,
+				videoThumbnail,
 				intoxicationLevel,
 				userId,
+				editTokenHash,
 				expiresAt
 			})
 			.returning();
@@ -75,6 +93,7 @@ export async function POST(request: Request) {
 			.orderBy(rules.order);
 
 		return NextResponse.json({
+			editToken,
 			game: {
 				id: gameId,
 				title: newGame[0].title,

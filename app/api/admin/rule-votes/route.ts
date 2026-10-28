@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { recordAdminAction } from '@/lib/admin/auditLog';
 import { listRuleVoteLeaderboard } from '@/lib/admin/votes/listRuleVoteLeaderboard';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { db } from '@/lib/db';
 import { ruleVotes } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -32,7 +33,7 @@ const deleteUserVotesSchema = z.object({
  * Body: `{ userId }` — remove all votes by user.
  */
 export async function DELETE(request: Request) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

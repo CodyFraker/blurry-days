@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { adminFetch } from '@/lib/admin/adminFetch';
 
 type VoteRow = {
 	id: string;
@@ -36,7 +37,7 @@ export function AdminVotesManager() {
 		if (!window.confirm('Clear all votes for this rule?')) {
 			return;
 		}
-		const res = await fetch(`/api/admin/rule-templates/${templateId}/votes`, {
+		const res = await adminFetch(`/api/admin/rule-templates/${templateId}/votes`, {
 			method: 'DELETE'
 		});
 		if (!res.ok && res.status !== 204) {

@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { games, rules, CategoryEnum, DrinkEnum } from '@/lib/db/schema';
+import { rules } from '@/lib/db/schema';
+import { addCustomRuleBodySchema, deleteGameRuleBodySchema } from '@/lib/games/schemas';
+import { requireGameEdit } from '@/lib/games/requireGameEdit';
 import { calculateEffectiveDrink } from '@/lib/rules/ruleEngine';
-import { eq, and } from 'drizzle-orm';
-import { playableGameFilter } from '@/lib/games/gameVisibility';
+import { getClientIp, rateLimitOrResponse } from '@/lib/security/rateLimit';
+
+const MUTATE_GAME_WINDOW_MS = 60_000;
+const MUTATE_GAME_LIMIT = 30;
+
+function mutateRateLimit(request: Request, gameId: string) {
+	return rateLimitOrResponse(request, {
+		key: `games:mutate:${getClientIp(request)}:${gameId}`,
+		limit: MUTATE_GAME_LIMIT,
+		windowMs: MUTATE_GAME_WINDOW_MS
+	});
+}
 
 export async function POST(
 	request: Request,
@@ -16,34 +28,24 @@ export async function POST(
 			return NextResponse.json({ error: 'Game ID is required' }, { status: 400 });
 		}
 
+		const limited = mutateRateLimit(request, id);
+		if (limited) {
+			return limited;
+		}
+
 		const body = await request.json();
-		const { text, category, baseDrink } = body;
+		const parsed = addCustomRuleBodySchema.safeParse(body);
+		if (!parsed.success) {
+			return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+		}
+		const { text, category, baseDrink } = parsed.data;
 
-		if (!text || !category || baseDrink === undefined) {
-			return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+		const editResult = await requireGameEdit(request, id);
+		if ('response' in editResult) {
+			return editResult.response;
 		}
 
-		if (!Object.values(CategoryEnum).includes(category)) {
-			return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
-		}
-
-		if (!Object.values(DrinkEnum).includes(baseDrink)) {
-			return NextResponse.json({ error: 'Invalid drink level' }, { status: 400 });
-		}
-
-		const gameResult = await db
-			.select()
-			.from(games)
-			.where(
-				and(eq(games.id, id), playableGameFilter())
-			)
-			.limit(1);
-
-		if (gameResult.length === 0) {
-			return NextResponse.json({ error: 'Game not found or expired' }, { status: 404 });
-		}
-
-		const game = gameResult[0];
+		const game = editResult.game;
 
 		const currentRules = await db
 			.select()
@@ -94,23 +96,21 @@ export async function DELETE(
 			return NextResponse.json({ error: 'Game ID is required' }, { status: 400 });
 		}
 
-		const body = await request.json();
-		const { ruleId } = body;
-
-		if (!ruleId) {
-			return NextResponse.json({ error: 'Rule ID is required' }, { status: 400 });
+		const limited = mutateRateLimit(request, id);
+		if (limited) {
+			return limited;
 		}
 
-		const gameResult = await db
-			.select()
-			.from(games)
-			.where(
-				and(eq(games.id, id), playableGameFilter())
-			)
-			.limit(1);
+		const body = await request.json();
+		const parsed = deleteGameRuleBodySchema.safeParse(body);
+		if (!parsed.success) {
+			return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+		}
+		const { ruleId } = parsed.data;
 
-		if (gameResult.length === 0) {
-			return NextResponse.json({ error: 'Game not found or expired' }, { status: 404 });
+		const editResult = await requireGameEdit(request, id);
+		if ('response' in editResult) {
+			return editResult.response;
 		}
 
 		await db.delete(rules).where(and(eq(rules.id, ruleId), eq(rules.gameId, id)));

@@ -36,6 +36,13 @@
       "when": 1750720137570,
       "tag": "0005_rule_template_description",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1750720137571,
+      "tag": "0006_game_edit_token",
+      "breakpoints": true
     }
   ]
 }

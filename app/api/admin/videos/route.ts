@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { recordAdminAction } from '@/lib/admin/auditLog';
 import { createAdminVideoSchema } from '@/lib/admin/videos/schemas';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { db } from '@/lib/db';
 import { youtubeVideos } from '@/lib/db/schema';
 import { getLatestVideoSyncTime, syncChannelVideos } from '@/lib/youtube/syncChannelVideos';
@@ -36,7 +37,7 @@ export async function GET() {
  * Manually add a YouTube video row.
  */
 export async function POST(request: Request) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

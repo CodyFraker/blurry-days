@@ -3,6 +3,7 @@ import { recordAdminAction } from '@/lib/admin/auditLog';
 import { updateRuleTemplateSchema } from '@/lib/admin/ruleTemplates/schemas';
 import { getAdminRuleTemplateById } from '@/lib/admin/ruleTemplates/ruleTemplateAdmin';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { db } from '@/lib/db';
 import { ruleTemplates } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -49,7 +50,7 @@ export async function PATCH(
 	request: Request,
 	context: { params: Promise<{ id: string }> }
 ) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}
@@ -95,10 +96,10 @@ export async function PATCH(
  * - 204 — deleted
  */
 export async function DELETE(
-	_request: Request,
+	request: Request,
 	context: { params: Promise<{ id: string }> }
 ) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

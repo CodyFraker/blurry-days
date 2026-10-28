@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { recordAdminAction } from '@/lib/admin/auditLog';
 import { patchAdminVideoSchema } from '@/lib/admin/videos/schemas';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { db } from '@/lib/db';
 import { games, youtubeVideos } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -13,7 +14,7 @@ export async function PATCH(
 	request: Request,
 	context: { params: Promise<{ id: string }> }
 ) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}
@@ -58,10 +59,10 @@ export async function PATCH(
  * 409 if games reference this video.
  */
 export async function DELETE(
-	_request: Request,
+	request: Request,
 	context: { params: Promise<{ id: string }> }
 ) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { recordAdminAction } from '@/lib/admin/auditLog';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireAdminMutation } from '@/lib/admin/requireAdminMutation';
 import { db } from '@/lib/db';
 import { ruleVotes } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
@@ -40,10 +41,10 @@ export async function GET(
  * Clear all votes for a template.
  */
 export async function DELETE(
-	_request: Request,
+	request: Request,
 	context: { params: Promise<{ id: string }> }
 ) {
-	const adminResult = await requireAdmin();
+	const adminResult = await requireAdminMutation(request);
 	if ('response' in adminResult) {
 		return adminResult.response;
 	}

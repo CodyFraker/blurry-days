@@ -1,24 +1,6 @@
-import { z } from 'zod';
+import { createGameBodySchema } from '@/lib/games/schemas';
 
-const ruleSchema = z.object({
-	text: z.string().min(1),
-	category: z.string().min(1),
-	baseDrink: z.number(),
-	isCustom: z.boolean().optional(),
-	weight: z.number().optional(),
-	ruleTemplateId: z.string().uuid().optional()
-});
-
-export const createGameBodySchema = z.object({
-	title: z.string().optional(),
-	videoId: z.string().min(1),
-	videoTitle: z.string().min(1),
-	videoThumbnail: z.string().nullable().optional(),
-	intoxicationLevel: z.number(),
-	rules: z.array(ruleSchema).min(1)
-});
-
-export type CreateGameBody = z.infer<typeof createGameBodySchema>;
+export { createGameBodySchema, type CreateGameBody } from '@/lib/games/schemas';
 
 export function validateCreateGameBody(body: unknown) {
 	return createGameBodySchema.safeParse(body);

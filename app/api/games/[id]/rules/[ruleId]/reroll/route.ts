@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { games, rules } from '@/lib/db/schema';
+import { rules } from '@/lib/db/schema';
 import {
 	selectRules,
 	calculateEffectiveDrink,
 	substituteHostInRuleText
 } from '@/lib/rules/ruleEngine';
 import { incrementRuleTemplateUsage } from '@/lib/rules/incrementTemplateUsage';
+import { requireGameEdit } from '@/lib/games/requireGameEdit';
+import { getClientIp, rateLimitOrResponse } from '@/lib/security/rateLimit';
 import { eq, and } from 'drizzle-orm';
-import { playableGameFilter } from '@/lib/games/gameVisibility';
+
+const MUTATE_GAME_WINDOW_MS = 60_000;
+const MUTATE_GAME_LIMIT = 30;
 
 export async function POST(
-	_request: Request,
+	request: Request,
 	context: { params: Promise<{ id: string; ruleId: string }> }
 ) {
 	try {
@@ -21,19 +25,21 @@ export async function POST(
 			return NextResponse.json({ error: 'Game ID and Rule ID are required' }, { status: 400 });
 		}
 
-		const gameResult = await db
-			.select()
-			.from(games)
-			.where(
-				and(eq(games.id, id), playableGameFilter())
-			)
-			.limit(1);
-
-		if (gameResult.length === 0) {
-			return NextResponse.json({ error: 'Game not found or expired' }, { status: 404 });
+		const limited = rateLimitOrResponse(request, {
+			key: `games:mutate:${getClientIp(request)}:${id}`,
+			limit: MUTATE_GAME_LIMIT,
+			windowMs: MUTATE_GAME_WINDOW_MS
+		});
+		if (limited) {
+			return limited;
 		}
 
-		const game = gameResult[0];
+		const editResult = await requireGameEdit(request, id);
+		if ('response' in editResult) {
+			return editResult.response;
+		}
+
+		const game = editResult.game;
 
 		const ruleResult = await db
 			.select()

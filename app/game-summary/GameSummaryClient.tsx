@@ -230,6 +230,9 @@ export default function GameSummaryClient({ videoId }: GameSummaryClientProps) {
 			});
 			if (!response.ok) throw new Error('Failed');
 			const data = await response.json();
+			if (data.editToken && data.game?.id) {
+				sessionStorage.setItem(`game-edit-token:${data.game.id}`, data.editToken);
+			}
 			router.push(`/game/${data.game.id}`);
 		} catch {
 			setError('Failed to generate game');
