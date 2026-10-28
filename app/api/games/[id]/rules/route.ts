@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { rules } from '@/lib/db/schema';
 import { addCustomRuleBodySchema, deleteGameRuleBodySchema } from '@/lib/games/schemas';
